@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Supplier extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected $fillable = [
+        'business_id',
+        'company_name',
+        'user_id',
+        'national_id',
+        'tax_id',
+        'name',
+        'email',
+        'phone',
+        'status',
+        'notes',
+    ];
+
+    public function branches()
+    {
+        return $this->belongsToMany(Branch::class);
+    }
+}

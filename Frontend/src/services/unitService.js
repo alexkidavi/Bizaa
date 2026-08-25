@@ -1,0 +1,23 @@
+// services/brandService.js
+import axios from "axios";
+
+const API_URL = "/api/units";
+
+export default {
+
+getAll() {
+  return axios.get(`${API_URL}/get`);
+},
+
+create(data) {
+  return axios.post(`${API_URL}/register`, data);
+},
+
+update(id, data) {
+  return axios.patch(`${API_URL}/${id}`, data);
+},
+
+delete(id) {
+  return axios.delete(`${API_URL}/${id}/delete`);
+}
+};
