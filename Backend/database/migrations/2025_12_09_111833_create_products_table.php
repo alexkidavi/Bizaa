@@ -14,7 +14,11 @@ return new class extends Migration {
             $table->string('product_code')->unique();
             $table->string('barcode')->nullable();
             $table->foreignId('business_id')->constrained()->onDelete('cascade');
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            // nullable: this is who created the product, not what the
+            // product structurally belongs to (that's business_id above)
+            // — deleting a staff account must never cascade-delete the
+            // product catalog they happened to have created.
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             // RELATIONS
             $table->foreignId('parent_id')
                 ->nullable()

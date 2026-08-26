@@ -17,9 +17,9 @@ class SupplierBranch extends Model
     ];
 
     /**
-     * Brand relation
+     * Supplier relation
      */
-    public function category()
+    public function supplier()
     {
         return $this->belongsTo(Supplier::class);
     }

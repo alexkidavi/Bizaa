@@ -7,6 +7,7 @@ use App\Models\Payroll;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PayrollService
 {
@@ -33,47 +34,57 @@ class PayrollService
     public function generate(int $month, int $year): array
     {
         $businessId = Auth::user()->business_id;
-        $staff = User::where('business_id', $businessId)
-            ->whereNotNull('registered_by')
-            ->where('is_active', true)
-            ->get();
+        $createdBy  = Auth::id();
 
-        $created = [];
-        foreach ($staff as $user) {
-            $existing = Payroll::where('user_id', $user->id)
+        return DB::transaction(function () use ($businessId, $createdBy, $month, $year) {
+            $staff = User::where('business_id', $businessId)
+                ->whereNotNull('registered_by')
+                ->where('is_active', true)
+                ->get();
+
+            // Pre-fetched once for the whole batch instead of 2 queries per
+            // staff member — for hundreds of staff that was 500-1500+ round
+            // trips on a single "Generate Payroll" click.
+            $existingUserIds = Payroll::where('business_id', $businessId)
                 ->where('month', $month)
                 ->where('year', $year)
-                ->first();
+                ->pluck('user_id')
+                ->flip();
 
-            if ($existing) {
-                continue;
-            }
-
-            $overtimePay = Overtime::where('user_id', $user->id)
+            $overtimeByUser = Overtime::whereIn('user_id', $staff->pluck('id'))
                 ->where('status', 'approved')
                 ->whereMonth('date', $month)
                 ->whereYear('date', $year)
                 ->get()
-                ->sum(fn ($ot) => $ot->hours * $ot->rate_per_hour);
+                ->groupBy('user_id')
+                ->map(fn ($rows) => $rows->sum(fn ($ot) => $ot->hours * $ot->rate_per_hour));
 
-            $net = $user->basic_salary + $overtimePay;
+            $created = [];
+            foreach ($staff as $user) {
+                if ($existingUserIds->has($user->id)) {
+                    continue;
+                }
 
-            $created[] = Payroll::create([
-                'business_id'  => $businessId,
-                'user_id'      => $user->id,
-                'month'        => $month,
-                'year'         => $year,
-                'basic_salary' => $user->basic_salary,
-                'overtime_pay' => $overtimePay,
-                'allowances'   => 0,
-                'deductions'   => 0,
-                'net_salary'   => $net,
-                'status'       => 'draft',
-                'created_by'   => Auth::id(),
-            ]);
-        }
+                $overtimePay = $overtimeByUser->get($user->id, 0);
+                $net = $user->basic_salary + $overtimePay;
 
-        return $created;
+                $created[] = Payroll::create([
+                    'business_id'  => $businessId,
+                    'user_id'      => $user->id,
+                    'month'        => $month,
+                    'year'         => $year,
+                    'basic_salary' => $user->basic_salary,
+                    'overtime_pay' => $overtimePay,
+                    'allowances'   => 0,
+                    'deductions'   => 0,
+                    'net_salary'   => $net,
+                    'status'       => 'draft',
+                    'created_by'   => $createdBy,
+                ]);
+            }
+
+            return $created;
+        });
     }
 
     public function update(int $id, array $data): Payroll

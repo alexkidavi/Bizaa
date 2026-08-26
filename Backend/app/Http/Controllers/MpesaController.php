@@ -32,10 +32,16 @@ class MpesaController extends Controller
     }
    public function stkCallback(Request $request)
 {
-    info(
-        'M-PESA CALLBACK RECEIVED',
-        $request->all()
-    );
+    // Logged as a summary, not the full payload — CallbackMetadata carries
+    // the payer's phone number and M-Pesa receipt number, which don't
+    // belong in the general application log.
+    $stk = $request->input('Body.stkCallback', []);
+    info('M-PESA CALLBACK RECEIVED', [
+        'MerchantRequestID' => $stk['MerchantRequestID'] ?? null,
+        'CheckoutRequestID' => $stk['CheckoutRequestID'] ?? null,
+        'ResultCode'        => $stk['ResultCode'] ?? null,
+        'ResultDesc'        => $stk['ResultDesc'] ?? null,
+    ]);
     // 🔹 Always acknowledge Safaricom FIRST (important)
     $response = response()->json([
         'ResultCode' => 0,

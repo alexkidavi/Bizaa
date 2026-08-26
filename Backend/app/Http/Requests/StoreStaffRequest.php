@@ -13,18 +13,16 @@ class StoreStaffRequest extends FormRequest
 
     public function rules(): array
     {
-        $staffId = $this->route('staff');
-        $isUpdate = !is_null($staffId);
-
         return [
             'name'     => ['required', 'string', 'max:255'],
             'email'    => ['required', 'email', 'max:255'],
             'phone'    => ['required', 'string', 'max:30'],
             'role_id'  => ['required', 'integer', 'exists:roles,id'],
 
-            'password' => $isUpdate
-                ? ['nullable', 'string', 'min:8', 'max:100']
-                : ['nullable', 'string', 'min:8', 'max:100'],
+            // Nullable on both create and update: StaffService::create()
+            // generates and returns a random one-time password when this
+            // is omitted, rather than requiring the caller to invent one.
+            'password' => ['nullable', 'string', 'min:8', 'max:100'],
         ];
     }
 

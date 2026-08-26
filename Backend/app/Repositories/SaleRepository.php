@@ -60,13 +60,22 @@ class SaleRepository implements SaleRepositoryInterface
                     'note'        => $item['note'] ?? null,
                 ]);
 
+                // Locked for the rest of this transaction so two concurrent
+                // POS checkouts for the same product/branch can't both read
+                // the same stock figure and both decrement from it —
+                // matching the pattern StockRepository::transferStock()
+                // already uses correctly for the equivalent operation.
                 $productBranch = ProductBranch::where('product_id', $productId)
                     ->where('branch_id', $data['branch_id'])
+                    ->lockForUpdate()
                     ->first();
 
                 if ($productBranch) {
-                    $productBranch->stock = max(0, $productBranch->stock - $item['quantity']);
-                    $productBranch->save();
+                    if ($productBranch->stock < $item['quantity']) {
+                        throw new \Exception("Insufficient stock for product ID {$productId}");
+                    }
+
+                    $productBranch->decrement('stock', $item['quantity']);
                 }
             }
 

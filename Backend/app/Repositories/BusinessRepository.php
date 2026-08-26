@@ -3,12 +3,19 @@
 namespace App\Repositories;
 
 use App\Models\Business;
+use Illuminate\Support\Facades\Auth;
 
 class BusinessRepository
 {
+    /**
+     * Scoped to the caller's own business as defense-in-depth. Nothing in
+     * the app currently calls this with a client-supplied ID (BusinessService
+     * always resolves via $user->business), but it shouldn't be a landmine
+     * for future callers.
+     */
     public function find(int $id): Business
     {
-        return Business::findOrFail($id);
+        return Business::where('id', Auth::user()->business_id)->findOrFail($id);
     }
 
     /**

@@ -54,6 +54,34 @@ purchasePayments(params) {
       params,
     });
   },
+
+  generalSalesReport(params) {
+    return api.get(`${API_URL}/general-sales`, { params });
+  },
+
+  revenueByItem(params) {
+    return api.get(`${API_URL}/revenue-by-item`, { params });
+  },
+
+  itemsPurchaseReport(params) {
+    return api.get(`${API_URL}/items-purchase`, { params });
+  },
+
+  profitReport(params) {
+    return api.get(`${API_URL}/profit`, { params });
+  },
+
+  staffSalesReport(params) {
+    return api.get(`${API_URL}/staff-sales`, { params });
+  },
+
+  expensesReport(params) {
+    return api.get(`${API_URL}/expenses`, { params });
+  },
+
+  accountStatement(params) {
+    return api.get(`${API_URL}/account-statement`, { params });
+  },
 };
 
 export default ReportsService;

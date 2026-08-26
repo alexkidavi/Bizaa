@@ -74,7 +74,7 @@ return [
         ],
         'device'     => [
             'driver' => 'single',
-            'path'   => storage_path('logs/device_254716369120.log'),
+            'path'   => storage_path('logs/' . env('DEVICE_LOG_FILE', 'device.log')),
             'level'  => 'info',
         ],
         'slack'      => [

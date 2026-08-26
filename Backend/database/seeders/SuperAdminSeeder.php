@@ -59,9 +59,9 @@ class SuperAdminSeeder extends Seeder
         $this->command->info('Super admin role and permissions seeded.');
         $this->command->info('');
         $this->command->warn('To grant super admin access to a user, run:');
-        $this->command->info('  UPDATE users SET is_superadmin = 1, business_id = NULL, role_id = ' . $role->id . ' WHERE email = \'super@brimsoftsolutions.com\';');
-        $this->command->info('');
-        $this->command->warn('Or use the artisan command (if you create one):');
         $this->command->info('  php artisan superadmin:grant super@brimsoftsolutions.com');
+        $this->command->info('');
+        $this->command->warn('That command handles this safely (confirmation + idempotency check). Only fall back to raw SQL if it is unavailable:');
+        $this->command->info('  UPDATE users SET is_superadmin = 1, business_id = NULL, role_id = ' . $role->id . ' WHERE email = \'super@brimsoftsolutions.com\';');
     }
 }

@@ -127,6 +127,27 @@
               <label class="field-label">Business Location</label>
               <input v-model="form.business_location" type="text" class="field-input" placeholder="e.g. Nairobi, Kenya" />
             </div>
+
+            <div class="md:col-span-2">
+              <label class="field-label">Report Brand Color</label>
+              <div class="flex items-center gap-3">
+                <input
+                  v-model="form.report_brand_color"
+                  type="color"
+                  class="w-12 h-11 rounded-lg border border-[#D9EBF7] cursor-pointer bg-white"
+                />
+                <input
+                  v-model="form.report_brand_color"
+                  type="text"
+                  class="field-input flex-1"
+                  placeholder="#229DE7"
+                  maxlength="7"
+                />
+              </div>
+              <p class="text-[10.5px] text-slate-400 mt-1.5">
+                Used as the accent color on your exported PDF/Excel reports, alongside your logo.
+              </p>
+            </div>
           </div>
 
           <div class="border-t border-[#EEF5FB] my-6"></div>
@@ -173,6 +194,7 @@ const form = reactive({
   business_phone: "",
   business_website: "",
   business_logo: "",
+  report_brand_color: "",
   business_industry: "",
   business_location: "",
   business_code: "",
@@ -201,6 +223,7 @@ const populateForm = (data) => {
   form.business_phone = data.business_phone || "";
   form.business_website = data.business_website || "";
   form.business_logo = data.business_logo || "";
+  form.report_brand_color = data.report_brand_color || "#229DE7";
   form.business_industry = data.business_industry || "";
   form.business_location = data.business_location || "";
   form.business_code = data.business_code || "";

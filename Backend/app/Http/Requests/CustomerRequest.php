@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Policies\BrandPolicy;
+use App\Policies\CustomerPolicy;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -11,7 +11,7 @@ class CustomerRequest extends FormRequest
     public function authorize(): bool
     {
         $user = Auth::user();
-        $policy = new BrandPolicy();
+        $policy = new CustomerPolicy();
 
         return $policy->create($user);
     }

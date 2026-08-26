@@ -3,7 +3,9 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Validation\Rule;
 class StorePurchaseRequest extends FormRequest
 {
     /**
@@ -19,10 +21,16 @@ class StorePurchaseRequest extends FormRequest
      */
     public function rules(): array
     {
+        $businessId = Auth::user()->business_id;
+
         return [
 
             // ── Header ─────────────────────────────────────────────
-            'supplier_id'       => ['required', 'integer', 'exists:suppliers,id'],
+            'supplier_id'       => [
+                'required',
+                'integer',
+                Rule::exists('suppliers', 'id')->where(fn ($q) => $q->where('business_id', $businessId)),
+            ],
             'reference'         => ['nullable', 'string', 'max:100'],
             'purchase_date'     => ['required', 'date'],
             'notes'             => ['nullable', 'string', 'max:2000'],
@@ -53,7 +61,11 @@ class StorePurchaseRequest extends FormRequest
 
             // ── Branches ────────────────────────────────────────────
             'branches'             => ['required', 'array', 'min:1'],
-            'branches.*.branch_id' => ['required', 'integer', 'exists:branches,id'],
+            'branches.*.branch_id' => [
+                'required',
+                'integer',
+                Rule::exists('branches', 'id')->where(fn ($q) => $q->where('business_id', $businessId)),
+            ],
             'branches.*.subtotal'  => ['required', 'numeric', 'min:0'],
 
             // ── Items ───────────────────────────────────────────────
@@ -62,7 +74,7 @@ class StorePurchaseRequest extends FormRequest
             'branches.*.items.*.product_id' => [
                 'required',
                 'integer',
-                'exists:products,id'
+                Rule::exists('products', 'id')->where(fn ($q) => $q->where('business_id', $businessId)),
             ],
 
             'branches.*.items.*.quantity' => [

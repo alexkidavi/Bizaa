@@ -23,4 +23,12 @@ export default {
     const res = await api.delete(`${BASE}/${id}`);
     return res.data;
   },
+  async getPayments(id) {
+    const res = await api.get(`${BASE}/${id}/payments`);
+    return res.data;
+  },
+  async recordPayment(id, payload) {
+    const res = await api.post(`${BASE}/${id}/record-payments`, payload);
+    return res.data;
+  },
 };

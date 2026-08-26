@@ -67,7 +67,10 @@ class MpesaService
         ]);
 
         $response = Http::withBasicAuth($business->mpesa_consumer_key, $business->mpesa_consumer_secret)
-            ->withoutVerifying()
+            // TLS verification is only skipped in local/testing (e.g. a
+            // sandbox with a self-signed cert during development) — never
+            // in an environment holding real M-Pesa credentials.
+            ->when(app()->environment('local', 'testing'), fn ($http) => $http->withoutVerifying())
             ->get($authUrl);
         /** @var \Illuminate\Http\Client\Response $response */
         if (! $response->successful()) {
@@ -135,7 +138,10 @@ class MpesaService
         ]);
 
         $response = Http::withToken($this->accessToken($business))
-            ->withoutVerifying()
+            // TLS verification is only skipped in local/testing (e.g. a
+            // sandbox with a self-signed cert during development) — never
+            // in an environment holding real M-Pesa credentials.
+            ->when(app()->environment('local', 'testing'), fn ($http) => $http->withoutVerifying())
             ->post(config('services.mpesa.stk_url'), $payload);
 
         $stkData = $response->json() ?? [];
@@ -317,7 +323,10 @@ class MpesaService
         $accountRef = strtoupper("BRIM-{$planSlug}");
 
         $response = Http::withToken($this->accessToken())
-            ->withoutVerifying()
+            // TLS verification is only skipped in local/testing (e.g. a
+            // sandbox with a self-signed cert during development) — never
+            // in an environment holding real M-Pesa credentials.
+            ->when(app()->environment('local', 'testing'), fn ($http) => $http->withoutVerifying())
             ->post(config('services.mpesa.stk_url'), [
                 'BusinessShortCode' => $shortcode,
                 'Password'          => $password,
@@ -382,30 +391,31 @@ private function parseCallbackMetadata(array $items)
 
     return $data;
 }
-    protected function processPayment(array $paymentData): void
+    protected function processPayment(Business $business, array $paymentData): void
     {
-        $this->transactionStatusQuery($paymentData['receipt']);
+        $this->transactionStatusQuery($business, $paymentData['receipt']);
     }
 
-    protected function transactionStatusQuery(string $transactionId): array
+    protected function transactionStatusQuery(Business $business, string $transactionId): array
     {
-        $token = $this->accessToken();
-
-        $url = env('MPESA_ENVIRONMENT') === 'production'
-            ? 'https://api.safaricom.co.ke/mpesa/transactionstatus/v1/query'
-            : 'https://sandbox.safaricom.co.ke/mpesa/transactionstatus/v1/query';
+        // Routed through config() rather than env() — env() returns null
+        // for anything not read during the framework's own bootstrap once
+        // `config:cache` has run in production, and PartyA/credentials are
+        // the tenant's own (matching every other method in this class),
+        // not a single shared platform value.
+        $token = $this->accessToken($business);
 
         /** @var Response $response */
         $response = Http::withToken($token)
-            ->post($url, [
-                'Initiator' => env('MPESA_INITIATOR_NAME'),
-                'SecurityCredential' => env('MPESA_SECURITY_CREDENTIAL'),
+            ->post(config('services.mpesa.transaction_status_url'), [
+                'Initiator' => config('services.mpesa.initiator_name'),
+                'SecurityCredential' => config('services.mpesa.security_credential'),
                 'CommandID' => 'TransactionStatusQuery',
                 'TransactionID' => $transactionId,
-                'PartyA' => env('MPESA_SHORTCODE'),
+                'PartyA' => $business->mpesa_shortcode,
                 'IdentifierType' => '4',
-                'ResultURL' => env('MPESA_RESULT_URL'),
-                'QueueTimeOutURL' => env('MPESA_TIMEOUT_URL'),
+                'ResultURL' => config('services.mpesa.result_url'),
+                'QueueTimeOutURL' => config('services.mpesa.timeout_url'),
                 'Remarks' => 'Direct env query',
                 'Occasion' => 'Verification',
             ]);

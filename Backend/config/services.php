@@ -40,18 +40,26 @@ return [
         'callback_url' => env('MPESA_CALLBACK_URL'),
         'callback_secret' => env('MPESA_CALLBACK_SECRET'),
 
-        // 🔥 B2C SETTINGS
-        'b2c_url' => env('MPESA_B2C_URL'), // 👈 ADD THIS
+        // B2C settings
+        'b2c_url' => env('MPESA_B2C_URL'),
         'initiator_name' => env('MPESA_INITIATOR_NAME'),
         'security_credential' => env('MPESA_SECURITY_CREDENTIAL'),
+        'result_url' => env('MPESA_RESULT_URL'),
+        'timeout_url' => env('MPESA_TIMEOUT_URL'),
 
         // Optional but useful
-        'transaction_status_url' => env('MPESA_TRANSACTION_STATUS_URL'),
+        'transaction_status_url' => env('MPESA_TRANSACTION_STATUS_URL', env('MPESA_TRANSACTION_QUERY_URL')),
         'confirmation_url' => env('MPESA_CONFIRMATION_URL'),
     ],
     'digitax' => [
         'base_url' => env('DIGITAX_BASE_URL', 'https://api.digitax.tech/ke/v2'),
         'callback_url' => env('DIGITAX_CALLBACK_URL'),
+        // Long random token appended to the callback URL path so the
+        // inbound webhook can be authenticated without relying on
+        // DigiTax supporting HMAC signing. Set this, then update
+        // DIGITAX_CALLBACK_URL (and the URL registered with DigiTax) to
+        // end in /digitax/callback/{this value}.
+        'callback_secret' => env('DIGITAX_CALLBACK_SECRET'),
     ],
     'slack' => [
         'notifications' => [

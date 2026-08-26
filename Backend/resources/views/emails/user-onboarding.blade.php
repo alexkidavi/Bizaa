@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to NgumzoCRM!</title>
+    <title>Welcome to Bizaa!</title>
 </head>
 
 <body
@@ -18,7 +18,7 @@
                     <tr>
                         <td align="center" style="padding: 20px; border-bottom: 1px solid #e0e0e0;">
                             <a href="#" style="display: inline-block;">
-                                <img src="{{ $message->embed(public_path('logo.png')) }}" alt="NgumzoCRM Logo"
+                                <img src="{{ $message->embed(public_path('logo.png')) }}" alt="Bizaa Logo"
                                      width="150" height="50" style="max-width: 150px; height: auto;">
                             </a>
                         </td>
@@ -32,7 +32,7 @@
                             </h2>
 
                             <p style="margin-bottom: 15px;">
-                                Your NgumzoCRM account has been created successfully.
+                                Your Bizaa account has been created successfully.
                             </p>
 
                             <p><strong>Login Email:</strong> {{ $user->email }}</p>
@@ -43,15 +43,15 @@
                             </p>
 
                             <p style="text-align: center; margin-top: 20px; margin-bottom: 20px;">
-                                <a href="https://crm.ngumzo.com/login"
+                                <a href="https://bripos.brimsoftsolutions.com/login"
                                    style="display: inline-block; background-color: #0ea5e9; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 5px; font-weight: bold;">
-                                    Login to NgumzoCRM
+                                    Login to Bizaa
                                 </a>
                             </p>
 
                             <p>
                                 If you need assistance, feel free to reach us at
-                                <a href="mailto:support@ngumzo.com" style="color: #007bff; text-decoration: none;">support@ngumzo.com</a>.
+                                <a href="mailto:support@brimsoftsolutions.com" style="color: #007bff; text-decoration: none;">support@brimsoftsolutions.com</a>.
                             </p>
                         </td>
                     </tr>
@@ -60,7 +60,7 @@
                     <tr>
                         <td align="center"
                             style="padding-top: 20px; margin-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #888888; text-align: center;">
-                            <p style="margin: 0; line-height: 1.5;">Regards,<br>The NgumzoCRM Support Team</p>
+                            <p style="margin: 0; line-height: 1.5;">Regards,<br>The Bizaa Support Team</p>
 
                             <div style="margin-top: 10px;">
                                 <a href="#" style="display: inline-block; margin: 0 5px;">
@@ -74,7 +74,7 @@
                                 </a>
                             </div>
 
-                            <p style="margin: 10px 0 5px 0;">&copy; {{ date('Y') }} NgumzoCRM. All rights reserved.</p>
+                            <p style="margin: 10px 0 5px 0;">&copy; {{ date('Y') }} Bizaa. All rights reserved.</p>
                             <p style="margin: 0;">
                                 <a href="#" style="color: #888888; text-decoration: underline;">Unsubscribe</a>
                             </p>

@@ -118,13 +118,31 @@ class DigitaxController extends Controller
      * DigiTax calls this asynchronously once an item or sale it was sent
      * has finished processing on their side (event: item.sync | sale.sync).
      * Always acknowledge quickly — DigiTax retries on non-2xx.
+     *
+     * $token authenticates the caller against services.digitax.callback_secret
+     * (a long random value embedded in the callback URL path, since this
+     * endpoint has no other way to verify the request actually came from
+     * DigiTax). If no secret is configured yet, the request is allowed
+     * through with a warning so existing installs don't break silently —
+     * configure DIGITAX_CALLBACK_SECRET to close that gap.
      */
-    public function callback(Request $request): JsonResponse
+    public function callback(Request $request, ?string $token = null): JsonResponse
     {
+        $expected = config('services.digitax.callback_secret');
+
+        if ($expected && ! hash_equals($expected, (string) $token)) {
+            info('DIGITAX CALLBACK: rejected, invalid or missing token', ['ip' => $request->ip()]);
+
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        if (! $expected) {
+            info('DIGITAX CALLBACK: WARNING — callback_secret not configured, request not authenticated');
+        }
+
         $payload = $request->all();
         info('DIGITAX CALLBACK: received', [
             'ip' => $request->ip(),
-            'headers' => $request->headers->all(),
             'payload' => $payload,
         ]);
 

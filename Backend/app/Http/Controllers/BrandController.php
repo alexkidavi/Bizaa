@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesDeleteErrors;
 use App\Http\Requests\BrandRequest;
 use App\Models\Brand;
 use App\Services\BrandService;
@@ -9,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 
 class BrandController extends Controller
 {
+    use HandlesDeleteErrors;
+
     protected $service;
 
     public function __construct(BrandService $service)
@@ -62,7 +65,6 @@ class BrandController extends Controller
     {
         $brand = $this->service->getBrand($id);
         $this->authorize('delete', $brand);
-        $this->service->deleteBrand($id);
-        return response()->json(['message' => 'Brand deleted successfully']);
+        return $this->safeDelete(fn () => $this->service->deleteBrand($id), 'Brand deleted successfully');
     }
 }

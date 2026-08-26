@@ -58,8 +58,16 @@ class ProductFactory extends Factory
             'name' => $name,
             'product_code' => strtoupper($this->faker->unique()->bothify('PRO-#####')),
             'barcode' => $this->faker->ean13(),
-            'business_id' => 1,
-            'user_id' => 1,
+            // Picks an existing row rather than hardcoding id 1 (which
+            // assumed a specific seed order and broke as soon as it
+            // didn't hold), but doesn't force-create a new Business/User
+            // via the factory relationship either — ProductSeeder calls
+            // ->make() and immediately overwrites these with its own
+            // randomly-selected existing IDs, so an eager factory()
+            // relationship here would silently create orphaned rows on
+            // every seeder run for no reason.
+            'business_id' => \App\Models\Business::inRandomOrder()->value('id') ?? \App\Models\Business::factory(),
+            'user_id' => \App\Models\User::inRandomOrder()->value('id') ?? \App\Models\User::factory(),
 
             // 'category_id' => rand(1, 10),
             // 'brand_id' => rand(1, 10),

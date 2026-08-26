@@ -174,7 +174,7 @@ public function permissions()
 
 public function getAllPermissionsList()
 {
-    if ($this->role === 'admin') {
+    if ($this->role?->name === 'admin') {
         return Permission::pluck('name');
     }
 

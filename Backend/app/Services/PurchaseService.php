@@ -54,8 +54,6 @@ class PurchaseService
     {
         return DB::transaction(function () use ($data) {
             $user = Auth::user();
-               info($data);
-               info('purchase');
             // 1. Resolve financials
             [$paidAmount, $paymentStatus] = $this->resolvePayment(
                 $data['payment_type'],
@@ -165,31 +163,33 @@ class PurchaseService
 
     public function addPayment(int $id, array $data): Purchase
     {
-        $user     = Auth::user();
-        $purchase = $this->repo->findById(Crypt::encryptString($id), $user->business_id);
+        return DB::transaction(function () use ($id, $data) {
+            $user     = Auth::user();
+            $purchase = $this->repo->findById(Crypt::encryptString($id), $user->business_id);
 
-        $this->repo->recordPayment($purchase, [
-            'user_id'           => $user->id,
-            'amount'            => $data['amount'],
-            'payment_method'    => $data['payment_method'],
-            'payment_reference' => $data['payment_reference'] ?? null,
-            'payment_date'      => $data['payment_date'],
-            'notes'             => $data['notes'] ?? null,
-        ]);
+            $this->repo->recordPayment($purchase, [
+                'user_id'           => $user->id,
+                'amount'            => $data['amount'],
+                'payment_method'    => $data['payment_method'],
+                'payment_reference' => $data['payment_reference'] ?? null,
+                'payment_date'      => $data['payment_date'],
+                'notes'             => $data['notes'] ?? null,
+            ]);
 
-        $totalPaid = $purchase->payments()->sum('amount');
-        $newStatus = match (true) {
-            $totalPaid <= 0                    => 'unpaid',
-            $totalPaid >= $purchase->grand_total => 'paid',
-            default                             => 'partial',
-        };
+            $totalPaid = $purchase->payments()->sum('amount');
+            $newStatus = match (true) {
+                $totalPaid <= 0                    => 'unpaid',
+                $totalPaid >= $purchase->grand_total => 'paid',
+                default                             => 'partial',
+            };
 
-        $purchase->update([
-            'paid_amount'    => $totalPaid,
-            'balance'        => max(0, $purchase->grand_total - $totalPaid),
-            'payment_status' => $newStatus,
-        ]);
-        return $this->repo->findById(Crypt::encryptString($purchase->id), $user->business_id);
+            $purchase->update([
+                'paid_amount'    => $totalPaid,
+                'balance'        => max(0, $purchase->grand_total - $totalPaid),
+                'payment_status' => $newStatus,
+            ]);
+            return $this->repo->findById(Crypt::encryptString($purchase->id), $user->business_id);
+        });
     }
 
     // ─────────────────────────────────────────────────────────
@@ -238,7 +238,6 @@ class PurchaseService
             ];
 
             foreach ($branchData['items'] as $item) {
-                info($item);
                 $allItems[] = [
                     'purchase_id'  => $purchaseId,
                     'branch_id'    => $branchId,

@@ -21,7 +21,13 @@ return new class extends Migration
              $table->string('status')->default('active')->nullable();
             $table->string('registered_by')->nullable();
             $table->timestamp('last_login_at')->nullable();
-            $table->string('role')->default('user');
+            // No string 'role' column here — role_id + the role()
+            // relationship below is the real RBAC mechanism. A same-named
+            // 'role' string column previously coexisted with it and
+            // permanently shadowed the relationship (a real DB column
+            // always wins over a same-named Eloquent relationship
+            // method), breaking every $user->role->... call site in the
+            // app. See 2026_08_26_000002_drop_legacy_role_string_column_from_users_table.php.
             $table->timestamp('email_verified_at')->nullable();
             $table->boolean('is_active')->default(true);
             $table->string('password');

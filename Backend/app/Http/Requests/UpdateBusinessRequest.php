@@ -21,6 +21,7 @@ class UpdateBusinessRequest extends FormRequest
             'business_industry' => 'nullable|string',
             'business_location' => 'nullable|string',
             'business_logo' => 'nullable|image|max:2048',
+            'report_brand_color' => 'nullable|regex:/^#[0-9A-Fa-f]{6}$/',
         ];
     }
 }

@@ -9,7 +9,7 @@
     </div>
 
     <!-- SUMMARY CARDS -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <div class="bg-white border border-[#D9EBF7] rounded-2xl p-4 shadow-sm">
         <p class="text-[10.5px] font-bold uppercase tracking-widest text-slate-400 mb-1">
           Today
@@ -27,6 +27,14 @@
           All Time
         </p>
         <p class="text-xl font-extrabold text-slate-900">{{ fmt(summary.total) }}</p>
+      </div>
+      <div class="bg-white border border-[#D9EBF7] rounded-2xl p-4 shadow-sm">
+        <p class="text-[10.5px] font-bold uppercase tracking-widest text-slate-400 mb-1">
+          Outstanding
+        </p>
+        <p class="text-xl font-extrabold" :class="Number(summary.outstanding) > 0 ? 'text-red-500' : 'text-slate-900'">
+          {{ fmt(summary.outstanding) }}
+        </p>
       </div>
     </div>
 
@@ -78,8 +86,37 @@
                 class="field-input"
                 :class="{ 'border-red-400': errors.amount }"
                 placeholder="0.00"
+                @input="onAmountInput"
               />
               <p v-if="errors.amount" class="field-error">Enter a valid amount</p>
+            </div>
+            <div v-if="!editingId">
+              <label class="field-label">Amount Paid</label>
+              <input
+                v-model="form.amount_paid"
+                type="number"
+                min="0"
+                step="0.01"
+                class="field-input"
+                :class="{ 'border-red-400': errors.amount_paid }"
+                placeholder="0.00"
+                @input="amountPaidTouched = true"
+              />
+              <p v-if="errors.amount_paid" class="field-error">Amount paid can't exceed the total</p>
+              <p class="text-[10.5px] text-slate-400 mt-1.5">
+                Leave as-is if paid in full, or lower it to record a partial payment now.
+              </p>
+            </div>
+            <div v-else class="bg-[#F5FAFF] border border-[#D9EBF7] rounded-xl p-3.5 flex items-center justify-between gap-3">
+              <div>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Balance</p>
+                <p class="text-sm font-extrabold" :class="Number(editingBalance) > 0 ? 'text-red-500' : 'text-emerald-600'">
+                  {{ fmt(editingBalance) }}
+                </p>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[10.5px] font-bold" :class="statusClass(editingStatus)">
+                {{ statusLabel(editingStatus) }}
+              </span>
             </div>
             <div>
               <label class="field-label required">Date</label>
@@ -223,6 +260,9 @@
                   <th class="px-5 py-3.5">Description</th>
                   <th class="px-5 py-3.5">Method</th>
                   <th class="px-5 py-3.5 text-right">Amount</th>
+                  <th class="px-5 py-3.5 text-right">Paid</th>
+                  <th class="px-5 py-3.5 text-right">Balance</th>
+                  <th class="px-5 py-3.5">Status</th>
                   <th class="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -257,8 +297,29 @@
                   <td class="px-5 py-4 text-right font-bold text-sm text-slate-900">
                     {{ fmt(exp.amount) }}
                   </td>
+                  <td class="px-5 py-4 text-right text-xs font-bold text-emerald-600">
+                    {{ fmt(exp.amount_paid) }}
+                  </td>
+                  <td class="px-5 py-4 text-right text-xs font-bold" :class="Number(exp.balance) > 0 ? 'text-red-500' : 'text-slate-400'">
+                    {{ fmt(exp.balance) }}
+                  </td>
+                  <td class="px-5 py-4">
+                    <span class="px-2.5 py-1 rounded-full text-[10.5px] font-bold border" :class="statusClass(exp.payment_status)">
+                      {{ statusLabel(exp.payment_status) }}
+                    </span>
+                  </td>
                   <td class="px-5 py-4 text-right">
                     <div class="flex justify-end gap-2">
+                      <button
+                        v-if="Number(exp.balance) > 0"
+                        @click="openPaymentModal(exp)"
+                        title="Add Payment"
+                        class="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-600 hover:bg-emerald-50 transition"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </button>
                       <button
                         @click="editExpense(exp)"
                         class="w-8 h-8 rounded-lg flex items-center justify-center text-[#229DE7] hover:bg-[#EAF5FD] transition"
@@ -336,11 +397,95 @@
         </div>
       </main>
     </div>
+
+    <!-- ADD PAYMENT MODAL -->
+    <div
+      v-if="paymentModal.open"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
+      @click.self="closePaymentModal"
+    >
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div class="h-[3px] bg-gradient-to-r from-[#229DE7] via-[#5BB8F5] to-[#229DE7]"></div>
+        <div class="px-6 pt-5 pb-4 border-b border-[#EEF5FB] flex items-center justify-between">
+          <h2 class="font-extrabold text-sm uppercase tracking-widest text-[#1682C4]">Record Payment</h2>
+          <button @click="closePaymentModal" class="text-slate-400 hover:text-red-500 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="px-6 pt-5 grid grid-cols-2 gap-3">
+          <div class="bg-[#F5FAFF] border border-[#D9EBF7] rounded-xl p-3">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total Amount</p>
+            <p class="text-base font-extrabold text-slate-900">{{ fmt(paymentModal.expense?.amount) }}</p>
+          </div>
+          <div class="bg-red-50 border border-red-100 rounded-xl p-3">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-red-400">Outstanding Balance</p>
+            <p class="text-base font-extrabold text-red-600">{{ fmt(paymentModal.expense?.balance) }}</p>
+          </div>
+        </div>
+
+        <form @submit.prevent="submitPayment" class="p-6 space-y-4">
+          <div>
+            <label class="field-label required">Amount</label>
+            <input
+              v-model="paymentForm.amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              :max="paymentModal.expense?.balance"
+              class="field-input"
+              :class="{ 'border-red-400': paymentErrors.amount }"
+              placeholder="0.00"
+            />
+            <p v-if="paymentErrors.amount" class="field-error">Enter an amount between 0.01 and the balance due</p>
+          </div>
+          <div>
+            <label class="field-label required">Payment Method</label>
+            <select v-model="paymentForm.payment_method" class="field-input">
+              <option value="cash">Cash</option>
+              <option value="bank">Bank Transfer</option>
+              <option value="mobile">Mobile Money</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label required">Payment Date</label>
+            <input v-model="paymentForm.payment_date" type="date" class="field-input" />
+          </div>
+          <div>
+            <label class="field-label">Reference #</label>
+            <input v-model="paymentForm.payment_reference" type="text" class="field-input" placeholder="e.g. Receipt no." />
+          </div>
+          <div>
+            <label class="field-label">Notes</label>
+            <input v-model="paymentForm.notes" type="text" class="field-input" placeholder="Optional notes" />
+          </div>
+
+          <div class="flex items-center gap-3 pt-2">
+            <button
+              type="button"
+              @click="closePaymentModal"
+              class="flex-1 py-3 border border-[#D9EBF7] rounded-xl bg-white text-sm font-bold text-slate-500 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              :disabled="paymentLoading"
+              class="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-md shadow-emerald-600/30 transition-all disabled:opacity-60"
+            >
+              {{ paymentLoading ? "Saving..." : "Record Payment" }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import Swal from "sweetalert2";
 import ExpenseCategoryService from "@/services/ExpenseCategoryService";
 import ExpenseService from "@/services/ExpenseService";
@@ -348,10 +493,12 @@ import ExpenseService from "@/services/ExpenseService";
 const tableLoading = ref(true);
 const loading = ref(false);
 const editingId = ref(null);
+const editingExpense = ref(null);
+const amountPaidTouched = ref(false);
 
 const categories = ref([]);
 const expenses = ref([]);
-const summary = ref({ today: 0, this_month: 0, total: 0 });
+const summary = ref({ today: 0, this_month: 0, total: 0, outstanding: 0 });
 
 const currentPage = ref(1);
 const totalPages = ref(1);
@@ -363,12 +510,41 @@ const filterTo = ref("");
 const form = reactive({
   expense_category_id: "",
   amount: "",
+  amount_paid: "",
   expense_date: new Date().toISOString().slice(0, 10),
   payment_method: "cash",
   description: "",
   reference: "",
 });
-const errors = reactive({ category: false, amount: false, date: false });
+const errors = reactive({ category: false, amount: false, amount_paid: false, date: false });
+
+const editingBalance = computed(() => editingExpense.value?.balance ?? 0);
+const editingStatus = computed(() => editingExpense.value?.payment_status ?? "pending");
+
+const STATUS_STYLES = {
+  paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  partially_paid: "bg-amber-50 text-amber-700 border-amber-200",
+  pending: "bg-red-50 text-red-600 border-red-200",
+};
+const STATUS_LABELS = { paid: "Paid", partially_paid: "Partial", pending: "Pending" };
+const statusClass = (status) => STATUS_STYLES[status] || STATUS_STYLES.pending;
+const statusLabel = (status) => STATUS_LABELS[status] || "Pending";
+
+const onAmountInput = () => {
+  if (!amountPaidTouched.value) form.amount_paid = form.amount;
+};
+
+// Payment modal
+const paymentModal = reactive({ open: false, expense: null });
+const paymentForm = reactive({
+  amount: "",
+  payment_method: "cash",
+  payment_date: new Date().toISOString().slice(0, 10),
+  payment_reference: "",
+  notes: "",
+});
+const paymentErrors = reactive({ amount: false });
+const paymentLoading = ref(false);
 
 const fmt = (v) =>
   `KES ${Number(v || 0).toLocaleString("en-KE", { minimumFractionDigits: 2 })}`;
@@ -423,19 +599,23 @@ onMounted(async () => {
 const validate = () => {
   errors.category = !form.expense_category_id;
   errors.amount = !form.amount || Number(form.amount) <= 0;
+  errors.amount_paid =
+    !editingId.value && form.amount_paid !== "" && Number(form.amount_paid) > Number(form.amount);
   errors.date = !form.expense_date;
-  return !errors.category && !errors.amount && !errors.date;
+  return !errors.category && !errors.amount && !errors.amount_paid && !errors.date;
 };
 
 const save = async () => {
   if (!validate()) return;
   loading.value = true;
   try {
+    const payload = { ...form };
     if (editingId.value) {
-      await ExpenseService.update(editingId.value, form);
+      delete payload.amount_paid;
+      await ExpenseService.update(editingId.value, payload);
       toast("success", "Expense Updated");
     } else {
-      await ExpenseService.create(form);
+      await ExpenseService.create(payload);
       toast("success", "Expense Recorded");
     }
     resetForm();
@@ -454,6 +634,7 @@ const save = async () => {
 
 const editExpense = (exp) => {
   editingId.value = exp.id;
+  editingExpense.value = exp;
   form.expense_category_id = exp.expense_category_id;
   form.amount = exp.amount;
   form.expense_date = exp.expense_date ? exp.expense_date.slice(0, 10) : "";
@@ -461,6 +642,49 @@ const editExpense = (exp) => {
   form.description = exp.description || "";
   form.reference = exp.reference || "";
   window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+const openPaymentModal = (exp) => {
+  paymentModal.expense = exp;
+  paymentModal.open = true;
+  paymentForm.amount = "";
+  paymentForm.payment_method = exp.payment_method || "cash";
+  paymentForm.payment_date = new Date().toISOString().slice(0, 10);
+  paymentForm.payment_reference = "";
+  paymentForm.notes = "";
+  paymentErrors.amount = false;
+};
+
+const closePaymentModal = () => {
+  paymentModal.open = false;
+  paymentModal.expense = null;
+};
+
+const validatePayment = () => {
+  const balance = Number(paymentModal.expense?.balance ?? 0);
+  const amount = Number(paymentForm.amount);
+  paymentErrors.amount = !amount || amount <= 0 || amount > balance;
+  return !paymentErrors.amount;
+};
+
+const submitPayment = async () => {
+  if (!validatePayment()) return;
+  paymentLoading.value = true;
+  try {
+    await ExpenseService.recordPayment(paymentModal.expense.id, { ...paymentForm });
+    toast("success", "Payment Recorded");
+    closePaymentModal();
+    await Promise.all([fetchExpenses(), fetchSummary()]);
+  } catch (err) {
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: err?.response?.data?.message || "Something went wrong",
+      confirmButtonColor: "#229DE7",
+    });
+  } finally {
+    paymentLoading.value = false;
+  }
 };
 
 const removeExpense = async (id) => {
@@ -484,8 +708,11 @@ const removeExpense = async (id) => {
 
 const resetForm = () => {
   editingId.value = null;
+  editingExpense.value = null;
+  amountPaidTouched.value = false;
   form.expense_category_id = "";
   form.amount = "";
+  form.amount_paid = "";
   form.expense_date = new Date().toISOString().slice(0, 10);
   form.payment_method = "cash";
   form.description = "";

@@ -201,7 +201,12 @@
               </svg>
               Cancel &amp; Retry
             </button>
-            <button @click="confirmSTKPayment" class="mpesa-action-btn green">
+            <button
+              v-if="canConfirmManualPayment"
+              @click="confirmSTKPayment"
+              class="mpesa-action-btn green"
+              title="Only use this if you've independently verified the payment landed — Safaricom hasn't confirmed it yet"
+            >
               <svg
                 class="w-4 h-4"
                 fill="none"
@@ -363,8 +368,9 @@
             </div>
           </transition>
 
-          <!-- Manual code -->
-          <div class="manual-entry">
+          <!-- Manual code (supervisor override only — the backend
+               independently re-checks this permission) -->
+          <div v-if="canConfirmManualPayment" class="manual-entry">
             <div class="manual-label">Or enter M-Pesa code manually</div>
             <div class="manual-row">
               <input
@@ -414,6 +420,17 @@
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from "vue";
 import MpesaService from "@/services/MpesaService";
+import { useAuthStore } from "@/stores/auth";
+
+const auth = useAuthStore();
+// The backend independently re-checks this on submit — this only avoids
+// offering a control that would just come back rejected. A cashier
+// without the override can still complete the sale via a real STK
+// confirmation or a synced transaction; only the "trust me" paths are
+// gated.
+const canConfirmManualPayment = computed(() =>
+  auth.hasPermission("sales.confirm_manual_payment")
+);
 
 const props = defineProps({
   show: Boolean,

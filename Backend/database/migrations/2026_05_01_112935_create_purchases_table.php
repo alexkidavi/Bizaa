@@ -11,7 +11,10 @@ return new class extends Migration
         Schema::create('purchases', function (Blueprint $table) {
             $table->id();
             $table->foreignId('business_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            // nullable: who created the purchase, not what it belongs to —
+            // deleting a staff account must never cascade-delete purchase
+            // history.
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('supplier_id')->constrained()->cascadeOnDelete();
             $table->string('reference')->nullable()->index();
             $table->date('purchase_date');

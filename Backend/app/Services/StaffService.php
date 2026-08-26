@@ -9,6 +9,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 class StaffService
 {
     public function __construct(protected StaffRepository $repo) {}
@@ -37,9 +38,16 @@ public function create(array $data): User
     $auth = Auth::user();
 
     $this->guardDuplicateEmail($data['email'], $auth->business_id);
-    $password = $data['password'] ?? 'Test@2026';
 
-    return $this->repo->create([
+    // Staff creation has no onboarding-email pipeline today, so a random
+    // per-staff password needs to reach the admin creating the account
+    // somehow — surfaced (not persisted) on the returned model so the
+    // controller can hand it back once in the create response, replacing
+    // the previous hardcoded 'Test@2026' every tenant's staff shared.
+    $generatedPassword = empty($data['password']) ? Str::random(12) : null;
+    $password = $generatedPassword ?? $data['password'];
+
+    $user = $this->repo->create([
         'name'          => $data['name'],
         'email'         => $data['email'],
         'phone'         => PhoneHelper::normalize($data['phone']) ?? null,
@@ -49,6 +57,12 @@ public function create(array $data): User
         'registered_by' => $auth->id,
         'is_active'     => true,
     ]);
+
+    if ($generatedPassword) {
+        $user->temp_password = $generatedPassword;
+    }
+
+    return $user;
 }
     // ── Update ────────────────────────────────────────────────────
 

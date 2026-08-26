@@ -26,6 +26,7 @@ use App\Http\Controllers\{
     PermissionController,
     StaffController,
     ReportController,
+    ReportExportController,
     DashboardController,
     ExpenseCategoryController,
     ExpenseController,
@@ -109,9 +110,9 @@ Route::prefix('subscription')->middleware(['auth:api'])->group(function () {
     Route::get('/current',      [SubscriptionController::class, 'current']);
     Route::get('/history',      [SubscriptionController::class, 'history']);
     Route::post('/initiate-stk',[SubscriptionController::class, 'initiateStk']);
-});
     Route::get('/sub-plans',        [SubscriptionController::class, 'plans']);
     Route::get('/subscription-plans',        [SubscriptionController::class, 'allplans']);
+});
 /*
 |--------------------------------------------------------------------------
 | BRANCHES
@@ -215,7 +216,8 @@ Route::prefix('products')->middleware(['auth:api', 'subscription'])->group(funct
 | DIGITAX (KRA eTIMS integration — public callback + authenticated actions)
 |--------------------------------------------------------------------------
 */
-Route::post('/digitax/callback', [DigitaxController::class, 'callback']);
+// Token in the path authenticates the caller — see services.digitax.callback_secret.
+Route::post('/digitax/callback/{token?}', [DigitaxController::class, 'callback']);
 
 Route::prefix('digitax')->middleware(['auth:api', 'subscription'])->group(function () {
     Route::get('/package-units', [DigitaxController::class, 'packageUnits']);
@@ -250,8 +252,6 @@ Route::prefix('stocks')->middleware(['auth:api', 'subscription'])->group(functio
         ->middleware('permission:stock.transfer');
          Route::get('/stock-transfers', [StockController::class, 'getTransfers'])
         ->middleware('permission:stock.transfer');
-            Route::post('/transfer', [StockController::class, 'transferStock'])->middleware('permission:stock.transfer');
-    // Route
 Route::get('branch-products', [StockController::class, 'branchProducts'])->middleware('permission:stock.transfer');
 });
 
@@ -347,8 +347,10 @@ Route::get('/summary', [ExpenseController::class, 'summary'])
         Route::delete('/{id}', [ExpenseController::class, 'destroy'])
             ->middleware('permission:expenses.manage');
 
-        // Expense summary/statistics
-        Route::get('/summary/stats', [ExpenseController::class, 'summary'])
+        // Payment ledger for a partially/unpaid expense
+        Route::get('/{id}/payments', [ExpenseController::class, 'payments'])
+            ->middleware('permission:expenses.manage');
+        Route::post('/{id}/record-payments', [ExpenseController::class, 'recordPayment'])
             ->middleware('permission:expenses.manage');
     });
 Route::prefix('customers')->middleware(['auth:api', 'subscription'])->group(function () {
@@ -482,6 +484,21 @@ Route::middleware(['auth:api', 'subscription'])->prefix('reports')->group(functi
     Route::get('supplier-balances',  [ReportController::class, 'supplierBalances'])->middleware('permission:reports.view');
         Route::get('sale-payments',     [ReportController::class, 'salePayments'])->middleware('permission:reports.view');
     Route::get('purchase-payments', [ReportController::class, 'purchasePayments'])->middleware('permission:reports.view');
+
+    Route::get('general-sales',     [ReportController::class, 'generalSalesReport'])->middleware('permission:reports.view');
+    Route::get('revenue-by-item',   [ReportController::class, 'revenueByItem'])->middleware('permission:reports.view');
+    Route::get('items-purchase',    [ReportController::class, 'itemsPurchaseReport'])->middleware('permission:reports.view');
+    Route::get('profit',            [ReportController::class, 'profitReport'])->middleware('permission:reports.view');
+    Route::get('staff-sales',       [ReportController::class, 'staffSalesReport'])->middleware('permission:reports.view');
+    Route::get('expenses',          [ReportController::class, 'expensesReport'])->middleware('permission:reports.view');
+    Route::get('account-statement', [ReportController::class, 'accountStatement'])->middleware('permission:reports.view');
+
+    // Server-side export (Excel/PDF), generated on the queue — see
+    // GenerateReportExportJob. Same reports.view permission as viewing
+    // the report itself.
+    Route::post('export',              [ReportExportController::class, 'store'])->middleware('permission:reports.view');
+    Route::get('export/{id}',          [ReportExportController::class, 'show'])->middleware('permission:reports.view');
+    Route::get('export/{id}/download', [ReportExportController::class, 'download'])->middleware('permission:reports.view');
 });
 
 /*

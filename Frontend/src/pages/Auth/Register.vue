@@ -84,7 +84,7 @@
             </div>
             <div class="leading-tight">
               <div class="text-xl font-extrabold tracking-tight">
-                BRIM<span class="text-[#229DE7]">POS</span>
+                Bi<span class="text-[#229DE7]">zaa</span>
               </div>
               <div class="text-xs text-slate-400 tracking-wide">Smart Retail POS</div>
             </div>

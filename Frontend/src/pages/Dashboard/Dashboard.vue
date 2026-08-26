@@ -4,7 +4,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
       <div>
         <h1 class="text-xl md:text-2xl font-extrabold tracking-tight text-slate-900">
-          BRIPOS <span class="text-[#229DE7]">Dashboard</span>
+          Bizaa <span class="text-[#229DE7]">Dashboard</span>
         </h1>
         <p class="text-slate-500 mt-0.5 text-xs md:text-sm">
           {{ greeting }},

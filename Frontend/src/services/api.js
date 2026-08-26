@@ -1,5 +1,6 @@
 // services/api.js
 import axios from "axios";
+import { attachSessionHandling } from "./attachSessionHandling.js";
 
 const api = axios.create({
   baseURL: `${import.meta.env.VITE_APP_URL}/api`,
@@ -10,6 +11,8 @@ api.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+attachSessionHandling(api);
 
 export default api;
 

@@ -115,8 +115,13 @@ class AuthService
 
     protected function registerFailedAttempt(string $ipKey, string $emailKey): void
     {
-        Cache::put($ipKey, Cache::get($ipKey, 0) + 1, now()->addMinutes(5));
-        Cache::put($emailKey, Cache::get($emailKey, 0) + 1, now()->addMinutes(5));
+        // Cache::add() + increment() instead of get-then-put: two concurrent
+        // failed logins reading the same count and each writing back
+        // "count + 1" would lose an attempt under the old approach.
+        foreach ([$ipKey, $emailKey] as $key) {
+            Cache::add($key, 0, now()->addMinutes(5));
+            Cache::increment($key);
+        }
     }
 
     protected function tokenResponse(string $token, User $user): array

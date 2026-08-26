@@ -2,10 +2,12 @@
 
 namespace App\Repositories;
 
+use App\Models\Branch;
 use App\Models\Product;
 use App\Models\ProductBranch;
 use App\Models\StockHistory;
 use App\Models\StockTake;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
@@ -79,6 +81,7 @@ public function getAllStock()
 }
 public function all()
 {
+    $user     = Auth::user();
     $perPage  = request('per_page', 10);
     $search   = request('search');
     $category = request('category');
@@ -90,7 +93,8 @@ public function all()
         'brand:id,name',
         'unit:id,name',
         'branches:id,name',
-    ])->whereNull('parent_id');
+    ])->whereNull('parent_id')
+      ->where('business_id', $user->business_id);
 
     /* 🔍 SEARCH */
     if ($search) {
@@ -145,10 +149,12 @@ if ($stock) {
     // =========================
     else {
 
-        $query->whereIn('products.id', function ($sub) use ($stock) {
+        $query->whereIn('products.id', function ($sub) use ($stock, $user) {
 
             $sub->select('product_branch.product_id')
                 ->from('product_branch')
+                ->join('products', 'products.id', '=', 'product_branch.product_id')
+                ->where('products.business_id', $user->business_id)
                 ->groupBy('product_branch.product_id');
 
             if ($stock === 'out') {
@@ -244,14 +250,21 @@ if ($stock) {
 }
     /*
     |--------------------------------------------------------------------------
-    | FIND SINGLE PRODUCT
+    | FIND SINGLE PRODUCT'S STOCK BY BRANCH
     |--------------------------------------------------------------------------
     */
 public function getByProduct($id)
 {
-    $id=Crypt::decryptString($id);
+    $id = Crypt::decryptString($id);
+    $businessId = Auth::user()->business_id;
+
+    // Confirms the product itself belongs to the caller's business before
+    // returning any of its per-branch stock (404s otherwise).
+    Product::where('id', $id)->where('business_id', $businessId)->firstOrFail();
+
     $branches = ProductBranch::where('product_branch.product_id', $id)
     ->join('branches', 'branches.id', '=', 'product_branch.branch_id')
+    ->where('branches.business_id', $businessId)
     ->select(
         'branches.id as branch_id',
         'branches.name as branch_name',
@@ -263,12 +276,17 @@ public function getByProduct($id)
 
 public function find($id)
 {
+    $id = Crypt::decryptString($id);
+    $user = Auth::user();
+
     return $this->model->with([
         'category:id,name',
         'brand:id,name',
         'unit:id,name',
         'branches:id,name',
-    ])->findOrFail($id);
+    ])->where('id', $id)
+      ->where('business_id', $user->business_id)
+      ->firstOrFail();
 }
     /*
     |--------------------------------------------------------------------------
@@ -363,7 +381,12 @@ public function find($id)
     */
     public function update($id, array $data)
     {
-        $product = $this->model->findOrFail($id);
+        $user = Auth::user();
+
+        $product = $this->model->where('id', $id)
+            ->where('business_id', $user->business_id)
+            ->firstOrFail();
+
         $product->update($data);
 
         return $product;
@@ -376,7 +399,12 @@ public function find($id)
     */
     public function delete($id)
     {
-        $product = $this->model->findOrFail($id);
+        $user = Auth::user();
+
+        $product = $this->model->where('id', $id)
+            ->where('business_id', $user->business_id)
+            ->firstOrFail();
+
         return $product->delete();
     }
 
@@ -384,6 +412,18 @@ public function find($id)
 public function transferStock($data)
 {
     $user = Auth::user();
+    $businessId = $user->business_id;
+
+    // Defense-in-depth: TransferStockRequest already validates that both
+    // branches and every product belong to the caller's business — the
+    // repository does not trust its caller and re-verifies before any
+    // stock actually moves.
+    $fromBranchOk = Branch::where('id', $data['from_branch_id'])->where('business_id', $businessId)->exists();
+    $toBranchOk   = Branch::where('id', $data['to_branch_id'])->where('business_id', $businessId)->exists();
+
+    if (!$fromBranchOk || !$toBranchOk) {
+        throw new AuthorizationException('One or both branches do not belong to your business.');
+    }
 
     DB::beginTransaction();
 
@@ -394,6 +434,10 @@ public function transferStock($data)
 
             $productId = $item['product_id'];
             $qty       = $item['quantity'];
+
+            if (!Product::where('id', $productId)->where('business_id', $businessId)->exists()) {
+                throw new AuthorizationException("Product ID {$productId} does not belong to your business.");
+            }
 
             /* ───────── FROM BRANCH (DEDUCT) ───────── */
             $fromRecord = ProductBranch::where('product_id', $productId)
@@ -415,7 +459,7 @@ public function transferStock($data)
                 'reference'   => $reference,
                 'product_id'  => $fromRecord->product_id,
                 'branch_id'   => $data['from_branch_id'],
-                'business_id' => $user->business_id,
+                'business_id' => $businessId,
                 'user_id'     => $user->id,
                 'type'        => 'transfer',
                 'action'      => 'remove',
@@ -442,7 +486,7 @@ public function transferStock($data)
                 'reference'   => $reference,
                 'product_id'  => $fromRecord->product_id,
                 'branch_id'   => $data['to_branch_id'],
-                'business_id' => $user->business_id,
+                'business_id' => $businessId,
                 'user_id'     => $user->id,
                 'type'        => 'transfer',
                 'action'      => 'add',
@@ -462,13 +506,16 @@ public function transferStock($data)
 }
 public function getTransfers()
 {
+    $businessId = Auth::user()->business_id;
+
     $histories = StockHistory::where('type', 'transfer')
+        ->where('business_id', $businessId)
         ->orderBy('created_at', 'desc')
         ->get()
         ->groupBy('reference');
 
-    $products = \App\Models\Product::pluck('name', 'id');
-    $branches = \App\Models\Branch::pluck('name', 'id');
+    $products = Product::where('business_id', $businessId)->pluck('name', 'id');
+    $branches = Branch::where('business_id', $businessId)->pluck('name', 'id');
 
     return $histories->map(function ($records) use ($products, $branches) {
 
@@ -478,8 +525,8 @@ public function getTransfers()
         return [
             'reference' => $records->first()->reference,
 
-            'from_branch' => $branches[$from->branch_id] ?? null,
-            'to_branch'   => $branches[$to->branch_id] ?? null,
+            'from_branch' => $from ? ($branches[$from->branch_id] ?? null) : null,
+            'to_branch'   => $to ? ($branches[$to->branch_id] ?? null) : null,
 
             'transfer_date' => $records->first()->created_at,
             'items_count' => $records->count(),

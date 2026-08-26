@@ -42,7 +42,8 @@ class AttendanceController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
-        $this->authorize('delete', Attendance::class);
+        $record = $this->service->find($id);
+        $this->authorize('delete', $record);
         $this->service->delete($id);
         return response()->json(['message' => 'Attendance record deleted.']);
     }

@@ -50,11 +50,15 @@ class AttendanceService
         );
     }
 
+    public function find(int $id): Attendance
+    {
+        return Attendance::where('id', $id)
+            ->where('business_id', Auth::user()->business_id)
+            ->firstOrFail();
+    }
+
     public function delete(int $id): void
     {
-        Attendance::where('id', $id)
-            ->where('business_id', Auth::user()->business_id)
-            ->firstOrFail()
-            ->delete();
+        $this->find($id)->delete();
     }
 }

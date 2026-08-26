@@ -3,7 +3,9 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Validation\Rule;
 
 class StoreQuotationRequest extends FormRequest
 {
@@ -14,9 +16,19 @@ class StoreQuotationRequest extends FormRequest
 
     public function rules(): array
     {
+        $businessId = Auth::user()->business_id;
+
         return [
-            'customer_id'         => ['required', 'integer', 'exists:customers,id'],
-            'branch_id'           => ['nullable', 'integer', 'exists:branches,id'],
+            'customer_id' => [
+                'required',
+                'integer',
+                Rule::exists('customers', 'id')->where(fn ($q) => $q->where('business_id', $businessId)),
+            ],
+            'branch_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('branches', 'id')->where(fn ($q) => $q->where('business_id', $businessId)),
+            ],
 
             'quotation_number'    => ['nullable', 'string', 'max:100'],
             'status'              => ['required', 'in:draft,sent,accepted,rejected,expired,converted'],
@@ -32,8 +44,12 @@ class StoreQuotationRequest extends FormRequest
             'total_tax'           => ['required', 'numeric', 'min:0'],
             'grand_total'         => ['required', 'numeric', 'min:0'],
 
-            'items'                     => ['required', 'array', 'min:1'],
-            'items.*.product_id'        => ['required', 'integer', 'exists:products,id'],
+            'items'              => ['required', 'array', 'min:1'],
+            'items.*.product_id' => [
+                'required',
+                'integer',
+                Rule::exists('products', 'id')->where(fn ($q) => $q->where('business_id', $businessId)),
+            ],
             'items.*.description'       => ['nullable', 'string', 'max:500'],
             'items.*.quantity'          => ['required', 'numeric', 'min:0.0001'],
             'items.*.unit_price'        => ['required', 'numeric', 'min:0'],

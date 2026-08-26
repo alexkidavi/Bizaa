@@ -12,7 +12,10 @@ return new class extends Migration {
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
             $table->foreignId('business_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            // nullable: who created the invoice, not what it belongs to —
+            // deleting a staff account must never cascade-delete invoices
+            // (and the KRA/tax records tied to them).
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
             $table->foreignId('branch_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('quotation_id')->nullable();

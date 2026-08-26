@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Concerns\HandlesDeleteErrors;
 use App\Http\Requests\StorePurchaseRequest;
+use App\Models\Purchase;
 use App\Services\PurchaseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,8 @@ class PurchaseController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Purchase::class);
+
         $purchases = $this->service->list(
             $request->integer('per_page', 20)
         );
@@ -37,6 +40,8 @@ class PurchaseController extends Controller
      */
     public function store(StorePurchaseRequest $request): JsonResponse
     {
+        $this->authorize('create', Purchase::class);
+
         $purchase = $this->service->create($request->validated());
 
         return response()->json([
@@ -51,8 +56,9 @@ class PurchaseController extends Controller
      */
     public function show($id): JsonResponse
     {
-        
+
         $purchase = $this->service->find($id);
+        $this->authorize('view', $purchase);
 
         return response()->json(['data' => $purchase]);
     }
@@ -63,6 +69,9 @@ class PurchaseController extends Controller
      */
     public function update(StorePurchaseRequest $request, int $id): JsonResponse
     {
+        $existing = $this->service->find((string) $id);
+        $this->authorize('update', $existing);
+
         $purchase = $this->service->update($id, $request->validated());
 
         return response()->json([
@@ -77,6 +86,9 @@ class PurchaseController extends Controller
      */
     public function destroy($id): JsonResponse
     {
+        $purchase = $this->service->find($id);
+        $this->authorize('delete', $purchase);
+
         return $this->safeDelete(fn () => $this->service->delete($id), 'Purchase deleted successfully');
     }
 
@@ -87,6 +99,7 @@ class PurchaseController extends Controller
     public function payments(string $id): JsonResponse
     {
         $purchase = $this->service->find($id);
+        $this->authorize('view', $purchase);
 
         return response()->json([
             'data' => $purchase->payments()->with('user')->latest()->get(),
@@ -100,6 +113,7 @@ class PurchaseController extends Controller
     public function items($id): JsonResponse
     {
         $purchase = $this->service->find($id);
+        $this->authorize('view', $purchase);
         $grouped = $purchase->items()
             ->with(['product', 'branch'])
             ->get()
@@ -120,8 +134,11 @@ class PurchaseController extends Controller
      */
     public function recordPayment(Request $request, string $id): JsonResponse
     {
-         info($request->all());
          $id=Crypt::decryptString($id);
+
+        $existing = $this->service->find(Crypt::encryptString($id));
+        $this->authorize('update', $existing);
+
         $data = $request->validate([
             'amount'            => 'required|numeric|min:0.01',
             'payment_method'    => 'required|string',
@@ -129,8 +146,6 @@ class PurchaseController extends Controller
             'payment_reference' => 'nullable|string',
             'notes'             => 'nullable|string',
         ]);
-        //  info('payment data', $data);
-         info($id);
         $purchase = $this->service->addPayment((int) $id, $data);
 
         return response()->json([

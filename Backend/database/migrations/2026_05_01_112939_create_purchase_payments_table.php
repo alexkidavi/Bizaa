@@ -11,7 +11,8 @@ return new class extends Migration
         Schema::create('purchase_payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('purchase_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            // nullable: who recorded the payment, not what it belongs to.
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->decimal('amount', 15, 2);
             $table->string('payment_method');
             $table->string('payment_reference')->nullable();

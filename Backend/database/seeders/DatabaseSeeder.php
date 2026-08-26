@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             CategoriesTableSeeder::class,
             ProductSeeder::class,
-            RoleSeeder::class,
+            RolesAndPermissionsSeeder::class,
             DigitaxUnitCodeSeeder::class,
             DigitaxItemClassSeeder::class,
         ]);

@@ -10,11 +10,19 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Product;
+use App\Models\Purchase;
+use App\Models\Invoice;
+use App\Models\Quotation;
 use App\Models\Supplier;
 use App\Models\Unit;
+use App\Models\User;
 use App\Models\ExpenseCategory;
 use App\Models\Expense;
+use App\Models\Business;
+use App\Models\BusinessSubscription;
 use App\Models\Department;
+use App\Models\EcommerceStore;
+use App\Models\MpesaPayment;
 use App\Models\Shift;
 use App\Models\Attendance;
 use App\Models\Overtime;
@@ -23,12 +31,21 @@ use App\Models\Leave;
 use App\Models\Payroll;
 use App\Models\Role;
 use App\Models\Sale;
+use App\Models\StockTake;
 
 use App\Policies\BranchPolicy;
 use App\Policies\BrandPolicy;
+use App\Policies\BusinessPolicy;
+use App\Policies\BusinessSubscriptionPolicy;
 use App\Policies\CategoryPolicy;
 use App\Policies\CustomerPolicy;
+use App\Policies\EcommerceStorePolicy;
+use App\Policies\InvoicePolicy;
+use App\Policies\MpesaPaymentPolicy;
 use App\Policies\ProductPolicy;
+use App\Policies\PurchasePolicy;
+use App\Policies\QuotationPolicy;
+use App\Policies\StaffPolicy;
 use App\Policies\SupplierPolicy;
 use App\Policies\UnitPolicy;
 use App\Policies\ExpenseCategoryPolicy;
@@ -42,6 +59,7 @@ use App\Policies\LeavePolicy;
 use App\Policies\PayrollPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\SalePolicy;
+use App\Policies\StockTakePolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -64,6 +82,15 @@ class AuthServiceProvider extends ServiceProvider
         Payroll::class        => PayrollPolicy::class,
         Role::class           => RolePolicy::class,
         Sale::class           => SalePolicy::class,
+        StockTake::class      => StockTakePolicy::class,
+        EcommerceStore::class => EcommerceStorePolicy::class,
+        Purchase::class       => PurchasePolicy::class,
+        Invoice::class        => InvoicePolicy::class,
+        Quotation::class      => QuotationPolicy::class,
+        User::class           => StaffPolicy::class,
+        Business::class       => BusinessPolicy::class,
+        MpesaPayment::class   => MpesaPaymentPolicy::class,
+        BusinessSubscription::class => BusinessSubscriptionPolicy::class,
     ];
 
     public function boot()

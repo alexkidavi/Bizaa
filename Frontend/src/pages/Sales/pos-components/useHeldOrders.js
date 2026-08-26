@@ -5,13 +5,13 @@
  * Each order is stored with an `expiresAt` timestamp.
  * On load, expired orders are pruned automatically.
  *
- * Storage key: "brimpos_held_orders"
+ * Storage key: "bizaa_held_orders"
  * TTL:         6 hours (configurable via TTL_MS)
  */
 
 import { ref } from 'vue'
 
-const STORAGE_KEY = 'brimpos_held_orders'
+const STORAGE_KEY = 'bizaa_held_orders'
 const TTL_MS      = 6 * 60 * 60 * 1000   // 6 hours in milliseconds
 
 /* ── helpers ──────────────────────────── */

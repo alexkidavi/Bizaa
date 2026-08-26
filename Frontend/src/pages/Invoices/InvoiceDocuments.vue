@@ -224,6 +224,26 @@ const formatDate = fmtDate;
 
 const cap = (str) => (str ? str.charAt(0).toUpperCase() + str.slice(1) : "—");
 
+/**
+ * These documents are built as a raw HTML string and injected via
+ * doc.write() (see writeToFrame below) rather than Vue's auto-escaping
+ * template syntax, so every value that originates from user input —
+ * customer/business name, product name/SKU, item description, invoice
+ * notes, payment reference, branch name — must be escaped by hand before
+ * interpolation. Skipping this on any one of them is a stored XSS: e.g. a
+ * product or customer named `<img src=x onerror=...>` would execute
+ * inside the iframe the moment anyone opens this invoice's documents.
+ */
+const esc = (val) => {
+  if (val === null || val === undefined) return "";
+  return String(val)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+};
+
 const isOverdue = computed(
   () =>
     invoice.value?.payment_status !== "paid" &&
@@ -348,24 +368,22 @@ const buildDocHeader = (docTitle, docNumber, accent) => `
         display:flex;align-items:center;justify-content:center;margin-bottom:12px;overflow:hidden;">
         ${
           business.logo
-            ? `<img src="${business.logo}" style="width:100%;height:100%;object-fit:contain;" />`
-            : `<span style="font-size:20px;font-weight:900;color:${accent};">${(
-                business.name || "B"
-              )
-                .substring(0, 2)
-                .toUpperCase()}</span>`
+            ? `<img src="${esc(business.logo)}" style="width:100%;height:100%;object-fit:contain;" />`
+            : `<span style="font-size:20px;font-weight:900;color:${accent};">${esc(
+                (business.name || "B").substring(0, 2).toUpperCase()
+              )}</span>`
         }
       </div>
-      <div style="font-size:19px;font-weight:900;color:#0f172a;letter-spacing:-0.3px;">${
+      <div style="font-size:19px;font-weight:900;color:#0f172a;letter-spacing:-0.3px;">${esc(
         business.name
-      }</div>
-      <div style="font-size:11px;color:#94a3b8;font-style:italic;margin-top:1px;">${
+      )}</div>
+      <div style="font-size:11px;color:#94a3b8;font-style:italic;margin-top:1px;">${esc(
         business.tagline
-      }</div>
+      )}</div>
       <div style="font-size:11.5px;color:#64748b;margin-top:9px;line-height:1.8;">
-        ${business.address}<br>
-        ${business.phone} &nbsp;&middot;&nbsp; ${business.email}<br>
-        PIN: ${business.pin}
+        ${esc(business.address)}<br>
+        ${esc(business.phone)} &nbsp;&middot;&nbsp; ${esc(business.email)}<br>
+        PIN: ${esc(business.pin)}
       </div>
     </div>
 
@@ -375,7 +393,7 @@ const buildDocHeader = (docTitle, docNumber, accent) => `
         background:${accent}18;border:1.5px solid ${accent}33;margin-bottom:10px;">
         <span style="font-size:10px;font-weight:800;color:${accent};text-transform:uppercase;letter-spacing:2px;">${docTitle}</span>
       </div>
-      <div style="font-size:26px;font-weight:900;color:#0f172a;letter-spacing:-0.5px;line-height:1.1;">${docNumber}</div>
+      <div style="font-size:26px;font-weight:900;color:#0f172a;letter-spacing:-0.5px;line-height:1.1;">${esc(docNumber)}</div>
       <div style="font-size:12px;color:#64748b;margin-top:10px;line-height:1.9;">
         <span style="font-weight:700;color:#475569;">Issued:</span> ${fmtDate(
           invoice.value?.issue_date
@@ -403,10 +421,10 @@ const buildPartyRow = (accent) => `
   <div style="display:flex;gap:14px;margin-bottom:26px;flex-wrap:wrap;">
     <div class="party-box" style="border-left:4px solid ${accent};">
       <div class="label">Bill To</div>
-      <div class="name">${invoice.value?.customer?.name || "—"}</div>
+      <div class="name">${esc(invoice.value?.customer?.name) || "—"}</div>
       <div class="sub">
-        ${invoice.value?.customer?.email ? invoice.value.customer.email + "<br>" : ""}
-        ${invoice.value?.customer?.phone || ""}
+        ${invoice.value?.customer?.email ? esc(invoice.value.customer.email) + "<br>" : ""}
+        ${esc(invoice.value?.customer?.phone)}
       </div>
     </div>
     ${
@@ -414,7 +432,7 @@ const buildPartyRow = (accent) => `
         ? `
     <div class="party-box" style="border-left:4px solid ${accent};">
       <div class="label">Branch</div>
-      <div class="name">${invoice.value.branch.name}</div>
+      <div class="name">${esc(invoice.value.branch.name)}</div>
     </div>`
         : ""
     }
@@ -423,7 +441,7 @@ const buildPartyRow = (accent) => `
         ? `
     <div class="party-box" style="border-left:4px solid #f59e0b;background:#fffbeb;">
       <div class="label">From Quotation</div>
-      <div class="name" style="color:#d97706;">${invoice.value.quotation.quotation_number}</div>
+      <div class="name" style="color:#d97706;">${esc(invoice.value.quotation.quotation_number)}</div>
     </div>`
         : ""
     }
@@ -437,15 +455,15 @@ const buildItemsTable = (accent) => {
     <tr style="background:${i % 2 === 0 ? "#fff" : "#f8fafc"};">
       <td style="color:#94a3b8;font-weight:700;width:30px;">${i + 1}</td>
       <td>
-        <div style="font-weight:700;color:#0f172a;">${item.product?.name || "—"}</div>
+        <div style="font-weight:700;color:#0f172a;">${esc(item.product?.name) || "—"}</div>
         ${
           item.product?.sku
-            ? `<div style="font-size:10px;color:#94a3b8;">SKU: ${item.product.sku}</div>`
+            ? `<div style="font-size:10px;color:#94a3b8;">SKU: ${esc(item.product.sku)}</div>`
             : ""
         }
       </td>
       <td style="color:#64748b;font-style:italic;max-width:150px;">${
-        item.description || "—"
+        esc(item.description) || "—"
       }</td>
       <td style="text-align:center;font-weight:800;color:#0f172a;">${item.quantity}</td>
       <td style="text-align:right;color:#475569;">${fmt(item.unit_price)}</td>
@@ -526,15 +544,15 @@ const buildNotesBox = () =>
     ? `
   <div class="notes-box">
     <div class="nl">Notes / Terms &amp; Conditions</div>
-    <div class="nv">${invoice.value.notes}</div>
+    <div class="nv">${esc(invoice.value.notes)}</div>
   </div>`
     : "";
 
 const buildDocFooter = (docTitle, accent) => `
   <div class="doc-footer">
-    <span>${business.name} &middot; ${docTitle}</span>
+    <span>${esc(business.name)} &middot; ${docTitle}</span>
     <span>Printed: ${new Date().toLocaleString("en-KE")}</span>
-    <span style="color:${accent};font-weight:700;">${business.website}</span>
+    <span style="color:${accent};font-weight:700;">${esc(business.website)}</span>
   </div>
 `;
 
@@ -544,7 +562,7 @@ const buildDocFooter = (docTitle, accent) => `
 const buildInvoiceDoc = () => {
   const accent = "#229DE7";
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>${invoice.value?.invoice_number}</title>
+  <title>${esc(invoice.value?.invoice_number)}</title>
   <style>${BASE_CSS}</style></head><body>
   <div class="doc">
     ${buildDocHeader("Tax Invoice", invoice.value?.invoice_number ?? "—", accent)}
@@ -557,9 +575,9 @@ const buildInvoiceDoc = () => {
       <div style="flex:2;min-width:200px;padding:16px 20px;border:1.5px solid #e2e8f0;border-radius:8px;background:#f8fafc;">
         <div class="section-label">Payment Instructions</div>
         <div style="font-size:12px;color:#475569;line-height:1.9;">
-          <strong>M-Pesa Paybill:</strong> 123456 &nbsp;&middot;&nbsp; <strong>Account No:</strong> ${
+          <strong>M-Pesa Paybill:</strong> 123456 &nbsp;&middot;&nbsp; <strong>Account No:</strong> ${esc(
             invoice.value?.invoice_number
-          }<br>
+          )}<br>
           <strong>Bank:</strong> Your Bank Name &nbsp;&middot;&nbsp; <strong>A/C No:</strong> 1234567890<br>
           <strong>Branch:</strong> Nairobi &nbsp;&middot;&nbsp; <strong>Swift Code:</strong> ABCDKENX
         </div>
@@ -599,11 +617,11 @@ const buildReceiptDoc = () => {
       <td style="font-weight:600;color:#475569;">${fmtDate(p.payment_date)}</td>
       <td>
         <span class="badge" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;">
-          ${cap(p.payment_method ?? "Cash")}
+          ${esc(cap(p.payment_method ?? "Cash"))}
         </span>
       </td>
-      <td style="color:#475569;">${p.payment_reference || "—"}</td>
-      <td style="color:#475569;">${p.user?.name || "—"}</td>
+      <td style="color:#475569;">${esc(p.payment_reference) || "—"}</td>
+      <td style="color:#475569;">${esc(p.user?.name) || "—"}</td>
       <td style="text-align:right;font-weight:800;color:#065f46;font-size:13px;">${fmt(
         p.amount
       )}</td>
@@ -613,7 +631,7 @@ const buildReceiptDoc = () => {
     .join("");
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>Receipt - ${invoice.value?.invoice_number}</title>
+  <title>Receipt - ${esc(invoice.value?.invoice_number)}</title>
   <style>${BASE_CSS}</style></head><body>
   <div class="doc">
     ${buildDocHeader(
@@ -625,8 +643,8 @@ const buildReceiptDoc = () => {
     <!-- Summary meta strip -->
     <div class="meta-strip" style="background:${accent}0f;border:1.5px solid ${accent}33;">
       ${[
-        ["Invoice No.", invoice.value?.invoice_number ?? "—"],
-        ["Customer", invoice.value?.customer?.name ?? "—"],
+        ["Invoice No.", esc(invoice.value?.invoice_number) || "—"],
+        ["Customer", esc(invoice.value?.customer?.name) || "—"],
         ["Invoice Total", fmt(invoice.value?.grand_total)],
         ["Amount Paid", fmt(invoice.value?.paid_amount)],
         ["Balance", fmt(invoice.value?.balance)],
@@ -751,7 +769,7 @@ const buildStatementDoc = () => {
             ${e.type}
           </span>
         </td>
-        <td style="color:#475569;">${e.ref}</td>
+        <td style="color:#475569;">${esc(e.ref)}</td>
         <td style="text-align:right;font-weight:700;color:${
           e.debit > 0 ? "#b91c1c" : "#cbd5e1"
         };">${e.debit > 0 ? fmt(e.debit) : "—"}</td>
@@ -771,7 +789,7 @@ const buildStatementDoc = () => {
     .join("");
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>Statement - ${invoice.value?.invoice_number}</title>
+  <title>Statement - ${esc(invoice.value?.invoice_number)}</title>
   <style>${BASE_CSS}</style></head><body>
   <div class="doc">
     ${buildDocHeader(
@@ -783,7 +801,7 @@ const buildStatementDoc = () => {
     <!-- Statement period strip -->
     <div class="meta-strip" style="background:${accent}0f;border:1.5px solid ${accent}30;">
       ${[
-        ["Customer", invoice.value?.customer?.name ?? "—"],
+        ["Customer", esc(invoice.value?.customer?.name) || "—"],
         ["Statement Date", fmtDate(new Date().toISOString())],
         ["Invoice Date", fmtDate(invoice.value?.issue_date)],
         ["Due Date", fmtDate(invoice.value?.due_date)],

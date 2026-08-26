@@ -13,6 +13,7 @@ class Business extends Model
         'business_phone',
         'business_website',
         'business_logo',
+        'report_brand_color',
         'business_industry',
         'business_location',
         'business_code',

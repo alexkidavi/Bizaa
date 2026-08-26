@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EcommerceStore;
 use App\Services\EcommerceStoreService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,8 @@ class EcommerceStoreController extends Controller
 
     public function index(): JsonResponse
     {
+        $this->authorize('viewAny', EcommerceStore::class);
+
         return response()->json([
             'data' => $this->service->getAllStores(),
         ]);
@@ -20,13 +23,18 @@ class EcommerceStoreController extends Controller
 
     public function show($id): JsonResponse
     {
+        $store = $this->service->getStore($id);
+        $this->authorize('view', $store);
+
         return response()->json([
-            'data' => $this->service->getStore($id),
+            'data' => $store,
         ]);
     }
 
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', EcommerceStore::class);
+
         $data = $request->validate([
             'branch_id'   => 'required|exists:branches,id',
             'name'        => 'required|string|max:255',
@@ -56,6 +64,9 @@ class EcommerceStoreController extends Controller
 
     public function update($id, Request $request): JsonResponse
     {
+        $store = $this->service->getStore($id);
+        $this->authorize('update', $store);
+
         $data = $request->validate([
             'name'        => 'sometimes|string|max:255',
             'slug'        => 'nullable|string|max:255',
@@ -80,6 +91,9 @@ class EcommerceStoreController extends Controller
 
     public function destroy($id): JsonResponse
     {
+        $store = $this->service->getStore($id);
+        $this->authorize('delete', $store);
+
         $this->service->deleteStore($id);
 
         return response()->json(['message' => 'Store deleted successfully']);
@@ -89,6 +103,9 @@ class EcommerceStoreController extends Controller
 
     public function storeProducts($id): JsonResponse
     {
+        $store = $this->service->getStore($id);
+        $this->authorize('view', $store);
+
         return response()->json([
             'data' => $this->service->getStoreProducts($id),
         ]);
@@ -96,6 +113,9 @@ class EcommerceStoreController extends Controller
 
     public function toggleListing($storeId, $productBranchId, Request $request): JsonResponse
     {
+        $store = $this->service->getStore($storeId);
+        $this->authorize('update', $store);
+
         $data = $request->validate([
             'is_listed' => 'required|boolean',
         ]);
@@ -110,6 +130,9 @@ class EcommerceStoreController extends Controller
 
     public function bulkToggle($storeId, Request $request): JsonResponse
     {
+        $store = $this->service->getStore($storeId);
+        $this->authorize('update', $store);
+
         $data = $request->validate([
             'product_branch_ids'   => 'required|array',
             'product_branch_ids.*' => 'integer',

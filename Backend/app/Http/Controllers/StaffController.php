@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreStaffRequest;
+use App\Models\User;
 use App\Services\StaffService;
 use Illuminate\Http\{JsonResponse, Request};
 
@@ -16,6 +17,8 @@ class StaffController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', User::class);
+
         $staff = $this->service->list($request->integer('per_page', 50));
         return response()->json($staff);
     }
@@ -26,11 +29,17 @@ class StaffController extends Controller
      */
     public function store(StoreStaffRequest $request): JsonResponse
     {
+        $this->authorize('create', User::class);
+
         $staff = $this->service->create($request->validated());
+        $tempPassword = $staff->temp_password ?? null;
 
         return response()->json([
-            'message' => 'Staff member added successfully.',
-            'data'    => $staff->load(['role', 'registeredBy:id,name']),
+            'message'       => 'Staff member added successfully.',
+            'data'          => $staff->load(['role', 'registeredBy:id,name']),
+            // Only present when no password was supplied — share this with
+            // the new staff member now, it will not be shown again.
+            'temp_password' => $tempPassword,
         ], 200);
     }
 
@@ -40,8 +49,11 @@ class StaffController extends Controller
      */
     public function show(int $id): JsonResponse
     {
+        $staff = $this->service->find($id);
+        $this->authorize('view', $staff);
+
         return response()->json([
-            'data' => $this->service->find($id),
+            'data' => $staff,
         ]);
     }
 
@@ -51,6 +63,9 @@ class StaffController extends Controller
      */
     public function update(StoreStaffRequest $request, int $id): JsonResponse
     {
+        $existing = $this->service->find($id);
+        $this->authorize('update', $existing);
+
         $staff = $this->service->update($id, $request->validated());
 
         return response()->json([
@@ -65,6 +80,9 @@ class StaffController extends Controller
      */
     public function destroy(int $id): JsonResponse
     {
+        $staff = $this->service->find($id);
+        $this->authorize('delete', $staff);
+
         $this->service->delete($id);
         return response()->json(['message' => 'Staff member removed successfully.']);
     }
@@ -75,6 +93,9 @@ class StaffController extends Controller
      */
     public function toggleStatus(int $id): JsonResponse
     {
+        $existing = $this->service->find($id);
+        $this->authorize('update', $existing);
+
         $staff = $this->service->toggleStatus($id);
 
         return response()->json([
@@ -84,52 +105,3 @@ class StaffController extends Controller
         ]);
     }
 }
-
-
-// =====================================================================
-// app/Http/Controllers/Api/RoleController.php
-// =====================================================================
-namespace App\Http\Controllers\Api;
-
-use App\Http\Controllers\Controller;
-use App\Models\Role;
-use Illuminate\Http\JsonResponse;
-
-class RoleController extends Controller
-{
-    /**
-     * GET /api/roles
-     * Return all roles (used to populate the role select dropdown).
-     */
-    public function index(): JsonResponse
-    {
-        $roles = Role::orderBy('name')->get(['id', 'name', 'description']);
-        return response()->json(['data' => $roles]);
-    }
-}
-
-
-// =====================================================================
-// routes/api.php  — add inside auth middleware group
-// =====================================================================
-/*
-Route::middleware(['auth:api'])->group(function () {
-
-    // ── Staff ────────────────────────────────────────────────────
-    Route::apiResource('staff', \App\Http\Controllers\Api\StaffController::class);
-    Route::patch('staff/{staff}/toggle-status', [\App\Http\Controllers\Api\StaffController::class, 'toggleStatus']);
-
-    // ── Roles ────────────────────────────────────────────────────
-    Route::get('roles', [\App\Http\Controllers\Api\RoleController::class, 'index']);
-
-});
-
-// ── ENDPOINT SUMMARY ─────────────────────────────────────────────
-// GET    /api/staff                        → paginated list
-// POST   /api/staff                        → create staff member
-// GET    /api/staff/{id}                   → show staff member
-// PUT    /api/staff/{id}                   → update staff member
-// DELETE /api/staff/{id}                   → remove staff member
-// PATCH  /api/staff/{id}/toggle-status     → activate / deactivate
-// GET    /api/roles                        → all roles (for dropdown)
-*/

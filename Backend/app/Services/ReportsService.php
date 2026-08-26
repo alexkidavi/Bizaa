@@ -152,7 +152,131 @@ class ReportsService
             $this->repo->getPurchasePayments($from, $to, $businessId, $method, $search),
             $this->repo->getPurchasePaymentsSummary($from, $to, $businessId),
         ];
- 
+
         return ['payments' => $rows, 'summary' => $summary];
+    }
+
+    /* ─── 10. General Sales Report ──────────── */
+    public function generalSalesReport(string $from, string $to, int $businessId, ?int $branchId = null, ?string $paymentMethod = null): array
+    {
+        $rows = $this->repo->getGeneralSalesReport($from, $to, $businessId, $branchId, $paymentMethod);
+
+        return [
+            'sales'   => $rows,
+            'summary' => [
+                'total_sales'     => $rows->count(),
+                'gross_total'     => $rows->sum('total'),
+                'total_discount'  => $rows->sum('discount'),
+                'total_tax'       => $rows->sum('tax'),
+                'total_paid'      => $rows->sum('paid'),
+                'balance_due'     => $rows->sum('balance'),
+                'avg_sale_value'  => $rows->count() > 0 ? round($rows->sum('total') / $rows->count(), 2) : 0,
+            ],
+        ];
+    }
+
+    /* ─── 11. Revenue by Item ────────────────── */
+    public function revenueByItem(string $from, string $to, int $businessId, ?int $branchId = null): array
+    {
+        $rows = $this->repo->getRevenueByItem($from, $to, $businessId, $branchId);
+        $totalRevenue = $rows->sum('revenue');
+
+        // Percentage-of-total needs the grand total across all rows first,
+        // so it's computed here rather than in the repository query.
+        $rows = $rows->map(function ($row) use ($totalRevenue) {
+            $row->revenue_percentage = $totalRevenue > 0
+                ? round(($row->revenue / $totalRevenue) * 100, 2)
+                : 0;
+            return $row;
+        });
+
+        return [
+            'items'   => $rows,
+            'summary' => [
+                'total_products' => $rows->count(),
+                'total_qty_sold' => $rows->sum('qty_sold'),
+                'total_revenue'  => $totalRevenue,
+                'top_item'       => $rows->first()->product_name ?? null,
+            ],
+        ];
+    }
+
+    /* ─── 12. Items Purchase Report ─────────── */
+    public function itemsPurchaseReport(string $from, string $to, int $businessId, ?int $supplierId = null): array
+    {
+        $rows = $this->repo->getItemsPurchaseReport($from, $to, $businessId, $supplierId);
+
+        return [
+            'items'   => $rows,
+            'summary' => [
+                'total_products'      => $rows->count(),
+                'total_qty_purchased' => $rows->sum('qty_purchased'),
+                'total_cost'          => $rows->sum('total_cost'),
+            ],
+        ];
+    }
+
+    /* ─── 13. Profit Report ─────────────────── */
+    public function profitReport(string $from, string $to, int $businessId): array
+    {
+        $result = $this->repo->getProfitReport($from, $to, $businessId);
+        $items = $result['items'];
+        $expenses = $result['total_expenses'];
+
+        $grossRevenue = $items->sum('revenue');
+        $totalCogs    = $items->sum('cost');
+        $grossProfit  = $items->sum('profit');
+        $netProfit    = $grossProfit - $expenses;
+
+        return [
+            'items'   => $items,
+            'summary' => [
+                'gross_revenue'  => $grossRevenue,
+                'total_cogs'     => $totalCogs,
+                'gross_profit'   => $grossProfit,
+                'total_expenses' => $expenses,
+                'net_profit'     => $netProfit,
+                'net_margin'     => $grossRevenue > 0 ? round(($netProfit / $grossRevenue) * 100, 2) : 0,
+            ],
+        ];
+    }
+
+    /* ─── 14. Staff Sales Report ────────────── */
+    public function staffSalesReport(string $from, string $to, int $businessId, ?int $branchId = null): array
+    {
+        $rows = $this->repo->getStaffSalesReport($from, $to, $businessId, $branchId);
+
+        return [
+            'staff'   => $rows,
+            'summary' => [
+                'total_staff' => $rows->count(),
+                'gross_total' => $rows->sum('gross_total'),
+                'total_paid'  => $rows->sum('total_paid'),
+            ],
+        ];
+    }
+
+    /* ─── 15. General Expenses Report ───────── */
+    public function expensesReport(string $from, string $to, int $businessId, ?int $categoryId = null): array
+    {
+        $rows = $this->repo->getExpensesReport($from, $to, $businessId, $categoryId);
+        $byCategory = $this->repo->getExpensesByCategory($from, $to, $businessId);
+
+        return [
+            'expenses'    => $rows,
+            'by_category' => $byCategory,
+            'summary'     => [
+                'total_expenses' => $rows->count(),
+                'total_amount'   => $rows->sum('amount'),
+                'total_paid'     => $rows->sum('amount_paid'),
+                'total_balance'  => $rows->sum('balance'),
+            ],
+        ];
+    }
+
+    /* ─── 16. Account Statement ─────────────── */
+    public function accountStatement(int $businessId, string $partyType, int $partyId, ?string $from = null, ?string $to = null): array
+    {
+        return $this->repo->getAccountStatement($businessId, $partyType, $partyId, $from, $to);
     }
 }

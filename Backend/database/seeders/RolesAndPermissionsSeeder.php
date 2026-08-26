@@ -50,6 +50,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'sales.update',
             'sales.delete',
             'sales.record_payment',
+            // Self-declaring an M-Pesa payment as received with no
+            // Safaricom-side confirmation (manual "Confirm Paid" bypass,
+            // or a freely-typed M-Pesa code) — not granted to Cashier by
+            // default; a supervisor override for when STK polling/sync
+            // genuinely can't verify a real payment.
+            'sales.confirm_manual_payment',
 
             // Stock
             'stock.view',

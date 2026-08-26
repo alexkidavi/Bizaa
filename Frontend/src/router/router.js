@@ -166,12 +166,6 @@ const routes = [
       }
     ]
   },
-   {
-        path: '/purchases/new',
-        name: 'NewPurchase',
-        component: () => import('@/pages/Purchases/NewPurchase.vue'),
-        meta: { permission: 'purchases.view_items' }
-      },
   {
     path: '/sales/invoices',
     component: DashboardLayout,
@@ -427,6 +421,14 @@ const routes = [
         meta: { title: "Change Password" },
       },
     ],
+  },
+
+  // 404 — must stay last so every route above gets a chance to match first
+  {
+    path: "/:pathMatch(.*)*",
+    name: "NotFound",
+    component: () => import("@/pages/NotFound.vue"),
+    meta: { public: true },
   },
 ];
 

@@ -5,9 +5,10 @@ namespace App\Exports;
 use App\Models\PhonebookContact;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
 use Illuminate\Support\Facades\Auth;
 
-class ContactsExport implements FromCollection, WithHeadings
+class ContactsExport implements FromCollection, WithHeadings, WithMapping
 {
     protected $phonebookId;
     protected $businessId;
@@ -36,5 +37,29 @@ class ContactsExport implements FromCollection, WithHeadings
     public function headings(): array
     {
         return ['Name', 'Phone', 'Email'];
+    }
+
+    /**
+     * Contact name/phone/email are user-submitted — a value starting with
+     * =, +, -, or @ would be interpreted as a formula by Excel/LibreOffice
+     * when the exported file is opened (CSV/formula injection). Prefixing
+     * a leading single quote forces it to render as literal text instead.
+     */
+    public function map($contact): array
+    {
+        return [
+            $this->escapeFormula($contact->name),
+            $this->escapeFormula($contact->phone),
+            $this->escapeFormula($contact->email),
+        ];
+    }
+
+    private function escapeFormula(?string $value): ?string
+    {
+        if ($value !== null && preg_match('/^[=+\-@]/', $value)) {
+            return "'" . $value;
+        }
+
+        return $value;
     }
 }

@@ -3,9 +3,8 @@ namespace App\Repositories;
 
 use App\Http\Helpers\PhoneHelper;
 use App\Models\Purchase;
+use App\Models\PurchasePayment;
 use App\Models\Supplier;
-use App\Models\Sale;
-use App\Models\SalePayment;
 use Illuminate\Support\Facades\Auth;
 
 class SupplierRepository
@@ -20,14 +19,20 @@ class SupplierRepository
 
     public function getPayments($id)
     {
-        return SalePayment::whereHas('sale', function ($query) use ($id) {
-            $query->where('supplier_id', $id);
+        $businessId = Auth::user()->business_id;
+
+        return PurchasePayment::whereHas('purchase', function ($query) use ($id, $businessId) {
+            $query->where('supplier_id', $id)
+                  ->where('business_id', $businessId);
         })->get();
     }
 
     public function getSales($id)
     {
+        $businessId = Auth::user()->business_id;
+
         return Purchase::where('supplier_id', $id)
+            ->where('business_id', $businessId)
             ->with(['payments'])
             ->withCount('items')
             ->get();

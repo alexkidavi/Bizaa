@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreInvoiceRequest;
+use App\Models\Invoice;
 use App\Services\InvoiceService;
 use Illuminate\Http\{JsonResponse, Request};
 use Illuminate\Support\Facades\Crypt;
@@ -13,11 +14,15 @@ class InvoiceController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Invoice::class);
+
         return response()->json($this->service->list($request->integer('per_page', 20)));
     }
 
     public function store(StoreInvoiceRequest $request): JsonResponse
     {
+        $this->authorize('create', Invoice::class);
+
         $invoice = $this->service->create($request->validated());
         $data = $invoice->toArray();
         $data['id'] = Crypt::encryptString($invoice->id);
@@ -28,6 +33,7 @@ class InvoiceController extends Controller
     {
         $id = (int) Crypt::decryptString($id);
         $invoice = $this->service->find($id);
+        $this->authorize('view', $invoice);
         $data = $invoice->toArray();
         $data['id'] = Crypt::encryptString($invoice->id);
         return response()->json(['data' => $data]);
@@ -36,6 +42,8 @@ class InvoiceController extends Controller
     public function update(StoreInvoiceRequest $request, $id): JsonResponse
     {
         $id = (int) Crypt::decryptString($id);
+        $existing = $this->service->find($id);
+        $this->authorize('update', $existing);
         $invoice = $this->service->update($id, $request->validated());
         $data = $invoice->toArray();
         $data['id'] = Crypt::encryptString($invoice->id);
@@ -45,6 +53,8 @@ class InvoiceController extends Controller
     public function destroy($id): JsonResponse
     {
         $id = (int) Crypt::decryptString($id);
+        $invoice = $this->service->find($id);
+        $this->authorize('delete', $invoice);
         $this->service->delete($id);
         return response()->json(['message' => 'Invoice deleted.']);
     }
@@ -53,6 +63,7 @@ class InvoiceController extends Controller
     {
         $id = (int) Crypt::decryptString($id);
         $invoice = $this->service->find($id);
+        $this->authorize('view', $invoice);
         return response()->json(['data' => $invoice->payments()->with('user')->latest()->get()]);
     }
 
@@ -66,6 +77,8 @@ class InvoiceController extends Controller
             'notes'             => ['nullable', 'string'],
         ]);
         $id = (int) Crypt::decryptString($id);
+        $existing = $this->service->find($id);
+        $this->authorize('update', $existing);
         $invoice = $this->service->recordPayment($id, $request->all());
         $data = $invoice->toArray();
         $data['id'] = Crypt::encryptString($invoice->id);

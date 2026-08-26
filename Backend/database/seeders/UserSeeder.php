@@ -8,12 +8,22 @@ use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\Business;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UserSeeder extends Seeder
 {
     public function run(): void
     {
         $business = Business::firstOrFail();
+
+        // The demo admin account is only ever needed for local development
+        // and automated tests; it must never be created against a real
+        // (staging/production) database via `db:seed`/`migrate --seed`.
+        if (app()->environment('local', 'testing')) {
+            $password = 'Demo@2026';
+        } else {
+            $password = Str::random(32);
+        }
 
         $user = User::create([
             'name'          => 'Test Admin',
@@ -23,8 +33,12 @@ class UserSeeder extends Seeder
             'role_id'       => 1,
             'status'        => 'active',
             'registered_by' => '',
-            'password'      => Hash::make('Demo@2026'),
+            'password'      => Hash::make($password),
         ]);
+
+        if (!app()->environment('local', 'testing')) {
+            $this->command?->warn("UserSeeder: generated one-time password for admin@brimsoftsolutions.com: {$password}");
+        }
 
         // Branches
         $branches = [

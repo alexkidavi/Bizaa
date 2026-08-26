@@ -8,7 +8,7 @@
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <span v-if="!sidebarCollapsed" class="sa-sidebar__brand-name">brimPOS <span>Admin</span></span>
+        <span v-if="!sidebarCollapsed" class="sa-sidebar__brand-name">Bizaa <span>Admin</span></span>
         <button class="sa-sidebar__collapse-btn" @click="sidebarCollapsed = !sidebarCollapsed">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <path v-if="!sidebarCollapsed" d="M15 18l-6-6 6-6"/>

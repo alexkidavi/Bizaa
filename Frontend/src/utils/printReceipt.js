@@ -8,6 +8,23 @@ const fmtKES = (val) =>
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
 
 /**
+ * This receipt is built as a raw HTML string and injected via
+ * document.write() into a same-origin popup, not through Vue's
+ * auto-escaping template syntax — every value sourced from user input
+ * (product name, cashier/customer name, branch, payment method) must be
+ * escaped by hand or this is a stored XSS that fires on every print.
+ */
+const esc = (val) => {
+  if (val === null || val === undefined) return "";
+  return String(val)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+};
+
+/**
  * Print a thermal receipt in a popup window.
  *
  * @param {Object} info   Normalized receipt data. `qrUrl` (etims_url or,
@@ -51,7 +68,7 @@ export async function printReceipt(info, biz = {}) {
       <div class="center etims">
         <img src="${qrDataUrl}" style="width:90px;height:90px;display:block;margin:0 auto 4px;"/>
         <div class="etims-label">KRA eTIMS Compliant Invoice</div>
-        ${kraSerial ? `<div class="biz-sub">CU Serial: ${kraSerial}</div>` : ""}
+        ${kraSerial ? `<div class="biz-sub">CU Serial: ${esc(kraSerial)}</div>` : ""}
         <div class="biz-sub">${etimsConfirmed ? "Scan to verify on KRA eTIMS" : "Scan to view receipt &middot; eTIMS verification pending"}</div>
       </div>`;
     } catch {
@@ -60,14 +77,14 @@ export async function printReceipt(info, biz = {}) {
   }
 
   const logoHtml = biz.logo
-    ? `<img src="${biz.logo}" style="max-height:56px;max-width:160px;object-fit:contain;display:block;margin:0 auto 6px;"/>`
+    ? `<img src="${esc(biz.logo)}" style="max-height:56px;max-width:160px;object-fit:contain;display:block;margin:0 auto 6px;"/>`
     : "";
 
   const itemsHtml = items
     .map(
       (item, idx) => `
       <div style="margin-bottom:8px;${idx > 0 ? "border-top:1px dotted #ddd;padding-top:7px;" : ""}">
-        <div style="font-weight:700;font-size:12px;">${item.name}</div>
+        <div style="font-weight:700;font-size:12px;">${esc(item.name)}</div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:#555;margin-top:2px;">
           <span>${item.qty} × ${fmtKES(item.unit_price)}${item.discount > 0 ? ` <span style="color:#059669">(-${item.discount}%)</span>` : ""}</span>
           <span style="font-weight:600;">${fmtKES(item.line_total)}</span>
@@ -82,7 +99,7 @@ export async function printReceipt(info, biz = {}) {
           .map(
             (p) =>
               `<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;color:#475569;">
-                <span>${cap(p.method)}</span><span>${fmtKES(p.amount)}</span>
+                <span>${esc(cap(p.method))}</span><span>${fmtKES(p.amount)}</span>
               </div>`
           )
           .join("")
@@ -92,7 +109,7 @@ export async function printReceipt(info, biz = {}) {
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Receipt ${ref}</title>
+  <title>Receipt ${esc(ref)}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Courier New',Courier,monospace;font-size:12px;color:#000;background:#fff;padding:16px;width:300px;margin:0 auto}
@@ -115,17 +132,17 @@ export async function printReceipt(info, biz = {}) {
 <body>
   <div class="center">
     ${logoHtml}
-    <div class="biz-name">${biz.name || "Bizaa"}</div>
-    ${biz.address ? `<div class="biz-sub">${biz.address}</div>` : ""}
-    ${biz.phone ? `<div class="biz-sub">${biz.phone}</div>` : ""}
+    <div class="biz-name">${esc(biz.name) || "Bizaa"}</div>
+    ${biz.address ? `<div class="biz-sub">${esc(biz.address)}</div>` : ""}
+    ${biz.phone ? `<div class="biz-sub">${esc(biz.phone)}</div>` : ""}
   </div>
   <div class="div">- - - - - - - - - - - - - - - - -</div>
   <div class="meta">
-    ${branch ? `<div>${branch}</div>` : ""}
-    <div>${date}</div>
-    <div class="ref">Receipt #${ref}</div>
-    ${cashier ? `<div>Cashier: ${cashier}</div>` : ""}
-    ${customer ? `<div>Customer: ${customer}</div>` : ""}
+    ${branch ? `<div>${esc(branch)}</div>` : ""}
+    <div>${esc(date)}</div>
+    <div class="ref">Receipt #${esc(ref)}</div>
+    ${cashier ? `<div>Cashier: ${esc(cashier)}</div>` : ""}
+    ${customer ? `<div>Customer: ${esc(customer)}</div>` : ""}
   </div>
   <div class="div">- - - - - - - - - - - - - - - - -</div>
   ${itemsHtml}

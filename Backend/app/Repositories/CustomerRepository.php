@@ -33,14 +33,20 @@ public function all()
 
     public function getPayments($id)
     {
-        return SalePayment::whereHas('sale', function ($query) use ($id) {
-            $query->where('customer_id', $id);
+        $businessId = Auth::user()->business_id;
+
+        return SalePayment::whereHas('sale', function ($query) use ($id, $businessId) {
+            $query->where('customer_id', $id)
+                  ->where('business_id', $businessId);
         })->get();
     }
 
     public function getSales($id)
     {
+        $businessId = Auth::user()->business_id;
+
         return Sale::where('customer_id', $id)
+            ->where('business_id', $businessId)
             ->with(['payments'])
             ->withCount('items')
             ->get();

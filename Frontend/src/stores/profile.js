@@ -1,6 +1,7 @@
 // src/stores/profile.js
 import { defineStore } from "pinia";
 import ProfileService from "../services/ProfileService";
+import { useAuthStore } from "./auth";
 
 export const useProfileStore = defineStore("profile", {
   state: () => ({
@@ -16,6 +17,7 @@ export const useProfileStore = defineStore("profile", {
       try {
         const res = await ProfileService.getProfile();
         this.profile = res.data.user;
+        useAuthStore().patchUser(res.data.user);
       } catch (err) {
         console.error("Error fetching profile:", err.response?.data || err.message);
         this.error = "Failed to load profile";
@@ -30,6 +32,11 @@ export const useProfileStore = defineStore("profile", {
       try {
         const res = await ProfileService.updateProfile(formData);
         this.profile = res.data.user;
+        // Keeps auth.user (what the header/sidebar actually render) in
+        // sync — previously this store fetched via a separate code path
+        // and auth.user only picked up the change on the next full
+        // page load / token refresh.
+        useAuthStore().patchUser(res.data.user);
       } catch (err) {
         console.error("Error updating profile:", err.response?.data || err.message);
         this.error = "Failed to update profile";

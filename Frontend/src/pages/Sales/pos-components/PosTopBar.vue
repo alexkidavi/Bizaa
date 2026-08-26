@@ -7,7 +7,7 @@
       </div>
 
       <div class="hidden sm:block">
-        <div class="text-sm font-extrabold text-white leading-none">BRIPOS</div>
+        <div class="text-sm font-extrabold text-white leading-none">Bizaa</div>
         <div class="text-[10px] font-bold text-[#5BB8F5] uppercase tracking-widest">
           Point of Sale
         </div>

@@ -61,7 +61,7 @@
 
             <div class="leading-tight">
               <div class="text-xl font-extrabold tracking-tight">
-                BRIM<span class="text-[#229DE7]">POS</span>
+                Bi<span class="text-[#229DE7]">zaa</span>
               </div>
               <div class="text-xs text-slate-400 tracking-wide">Smart Retail POS</div>
             </div>
@@ -170,8 +170,9 @@
           </div>
         </div>
 
-        <!-- Demo Login Button -->
+        <!-- Demo Login Button (dev builds only; stripped from production bundle) -->
         <button
+          v-if="isDevMode"
           @click="demoLogin"
           class="cursor-pointer w-full py-3.5 text-sm font-semibold rounded-xl border border-[#229DE7]/30 text-[#229DE7] bg-[#229DE7]/5 hover:bg-[#229DE7]/10 hover:border-[#229DE7]/50 transition flex items-center justify-center gap-2"
         >
@@ -229,7 +230,12 @@ const togglePasswordVisibility = () => {
   passwordVisible.value = !passwordVisible.value;
 };
 
+// import.meta.env.DEV is a build-time constant: Vite/Rollup dead-code-eliminates
+// this whole branch (including the credential literals) from production bundles.
+const isDevMode = import.meta.env.DEV;
+
 const demoLogin = () => {
+  if (!isDevMode) return;
   email.value = "admin@brimsoftsolutions.com";
   password.value = "Demo@2026";
 };

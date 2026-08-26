@@ -43,6 +43,7 @@ class BusinessService
             'business_phone' => $business->business_phone,
             'business_website' => $business->business_website,
             'business_logo' => $business->business_logo,
+            'report_brand_color' => $business->report_brand_color,
             'business_industry' => $business->business_industry,
             'business_location' => $business->business_location,
             'business_code' => $business->business_code,

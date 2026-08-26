@@ -1,9 +1,9 @@
-// src/services/RoleService.js
+// src/services/PermissionService.js
 import axios from 'axios';
 
 const RESOURCE = '/api/permissions';
 
-const RoleService = {
+const PermissionService = {
   getAll:      (params = {}) => axios.get(`${RESOURCE}/get`, { params }),
   getById:     (id)          => axios.get(`${RESOURCE}/${id}`),
   create:      (data)        => axios.post(RESOURCE, data),
@@ -12,4 +12,4 @@ const RoleService = {
   toggleStatus:(id)          => axios.patch(`${RESOURCE}/${id}/toggle-status`),
 };
 
-export default RoleService;
+export default PermissionService;

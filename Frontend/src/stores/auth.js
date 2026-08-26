@@ -32,6 +32,18 @@ export const useAuthStore = defineStore("auth", {
       localStorage.setItem("permissions", JSON.stringify(this.permissions));
     },
 
+    /**
+     * Merge partial fields (e.g. a profile edit's name/email/avatar) into
+     * the current user without touching permissions/subscription — unlike
+     * setUser(), which replaces the whole object and would silently wipe
+     * permissions if the caller's response doesn't include them.
+     */
+    patchUser(partial) {
+      if (!this.user) return;
+      this.user = { ...this.user, ...partial };
+      localStorage.setItem("user", JSON.stringify(this.user));
+    },
+
     setSubscription(sub) {
       this.subscription = sub;
       localStorage.setItem("subscription", JSON.stringify(sub));
