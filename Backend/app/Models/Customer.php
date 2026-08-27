@@ -24,4 +24,9 @@ class Customer extends Model
     {
         return $this->belongsToMany(Branch::class);
     }
+
+    public function crmContact()
+    {
+        return $this->hasOne(CrmContact::class, 'customer_id');
+    }
 }

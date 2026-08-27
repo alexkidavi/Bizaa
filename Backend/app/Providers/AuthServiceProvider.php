@@ -8,6 +8,14 @@ use Illuminate\Support\Facades\Gate;
 use App\Models\Branch;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\CrmCompany;
+use App\Models\CrmContact;
+use App\Models\CrmTag;
+use App\Models\CrmSource;
+use App\Models\CrmPipelineStage;
+use App\Models\CrmDeal;
+use App\Models\CrmActivity;
+use App\Models\CrmCampaign;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Purchase;
@@ -75,6 +83,7 @@ use App\Policies\DepartmentPolicy;
 use App\Policies\PerformanceReviewPolicy;
 use App\Policies\EmployeeProfilePolicy;
 use App\Policies\HrmLookupTypePolicy;
+use App\Policies\CrmLookupTypePolicy;
 use App\Policies\ResignationPolicy;
 use App\Policies\ShiftPolicy;
 use App\Policies\TerminationPolicy;
@@ -136,6 +145,14 @@ class AuthServiceProvider extends ServiceProvider
         Business::class       => BusinessPolicy::class,
         MpesaPayment::class   => MpesaPaymentPolicy::class,
         BusinessSubscription::class => BusinessSubscriptionPolicy::class,
+        CrmCompany::class     => CrmLookupTypePolicy::class,
+        CrmContact::class     => CrmLookupTypePolicy::class,
+        CrmTag::class          => CrmLookupTypePolicy::class,
+        CrmSource::class       => CrmLookupTypePolicy::class,
+        CrmPipelineStage::class => CrmLookupTypePolicy::class,
+        CrmDeal::class          => CrmLookupTypePolicy::class,
+        CrmActivity::class      => CrmLookupTypePolicy::class,
+        CrmCampaign::class      => CrmLookupTypePolicy::class,
     ];
 
     public function boot()

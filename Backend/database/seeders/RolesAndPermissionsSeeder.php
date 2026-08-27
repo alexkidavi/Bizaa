@@ -100,6 +100,24 @@ class RolesAndPermissionsSeeder extends Seeder
             'hr.payroll_config',
             'hr.salary_advances',
 
+            // CRM
+            'crm.contacts',
+            'crm.companies',
+            'crm.tags',
+            'crm.sources',
+            'crm.pipeline_settings',
+            'crm.deals',
+            'crm.activities',
+            'crm.campaigns',
+            'crm.dashboard',
+            // Row-level ACL: without these, a user with the base crm.deals /
+            // crm.contacts / crm.activities permission only sees records
+            // assigned to them, not the whole business's — see CrmDealService
+            // / CrmContactService / CrmActivityService / CrmDashboardService.
+            'crm.deals.view_all',
+            'crm.contacts.view_all',
+            'crm.activities.view_all',
+
             // Reports
             'reports.view',
 

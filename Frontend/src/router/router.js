@@ -427,6 +427,64 @@ const routes = [
       },
     ],
   },
+
+  // CRM
+  {
+    path: "/crm",
+    component: DashboardLayout,
+    children: [
+      {
+        path: "dashboard",
+        component: () => import("@/pages/CRM/CrmDashboard.vue"),
+        meta: { permission: "crm.dashboard" }
+      },
+      {
+        path: "contacts",
+        component: () => import("@/pages/CRM/Contacts.vue"),
+        meta: { permission: "crm.contacts" }
+      },
+      {
+        path: "contacts/:id",
+        component: () => import("@/pages/CRM/ContactDetail.vue"),
+        meta: { permission: "crm.contacts" }
+      },
+      {
+        path: "my-tasks",
+        component: () => import("@/pages/CRM/MyTasks.vue"),
+        meta: { permission: "crm.activities" }
+      },
+      {
+        path: "companies",
+        component: () => import("@/pages/CRM/Companies.vue"),
+        meta: { permission: "crm.companies" }
+      },
+      {
+        path: "sources",
+        component: () => import("@/pages/CRM/Sources.vue"),
+        meta: { permission: "crm.sources" }
+      },
+      {
+        path: "tags",
+        component: () => import("@/pages/CRM/Tags.vue"),
+        meta: { permission: "crm.tags" }
+      },
+      {
+        path: "deals",
+        component: () => import("@/pages/CRM/Deals.vue"),
+        meta: { permission: "crm.deals" }
+      },
+      {
+        path: "pipeline-stages",
+        component: () => import("@/pages/CRM/PipelineStages.vue"),
+        meta: { permission: "crm.pipeline_settings" }
+      },
+      {
+        path: "campaigns",
+        component: () => import("@/pages/CRM/Campaigns.vue"),
+        meta: { permission: "crm.campaigns" }
+      },
+    ],
+  },
   {
     path: "/roles",
     component: DashboardLayout,

@@ -17,7 +17,9 @@ class AuthService
         protected BankService $bankService,
         protected PerformanceRatingService $performanceRatingService,
         protected PayrollTaxBandService $payrollTaxBandService,
-        protected PayrollStatutoryRateService $payrollStatutoryRateService
+        protected PayrollStatutoryRateService $payrollStatutoryRateService,
+        protected CrmSourceService $crmSourceService,
+        protected CrmPipelineStageService $crmPipelineStageService
     ) {
     }
 
@@ -51,6 +53,8 @@ class AuthService
             $this->performanceRatingService->seedDefaults($business->id);
             $this->payrollTaxBandService->seedDefaults($business->id);
             $this->payrollStatutoryRateService->seedDefaults($business->id);
+            $this->crmSourceService->seedDefaults($business->id);
+            $this->crmPipelineStageService->seedDefaults($business->id);
         });
 
         return [

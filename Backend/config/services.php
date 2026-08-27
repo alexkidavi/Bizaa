@@ -61,6 +61,26 @@ return [
         // end in /digitax/callback/{this value}.
         'callback_secret' => env('DIGITAX_CALLBACK_SECRET'),
     ],
+    // Meta WhatsApp Business Cloud API — used by CRM campaigns. Falls back
+    // to a log-only dry run automatically when phone_number_id/token
+    // aren't set, so the campaign pipeline can be built and tested before
+    // a real WhatsApp Business Account is connected.
+    'whatsapp' => [
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
+        'api_version' => env('WHATSAPP_API_VERSION', 'v21.0'),
+    ],
+
+    // No SMS vendor has been chosen yet — the bound SmsProviderInterface
+    // is a config-swappable stub (LogSmsProvider) until one is. Whichever
+    // vendor is picked (Africa's Talking, Twilio, etc.) plugs in here
+    // without touching the campaign sending code.
+    'sms' => [
+        'provider' => env('SMS_PROVIDER'), // null = log-only dry run
+        'api_key' => env('SMS_API_KEY'),
+        'sender_id' => env('SMS_SENDER_ID'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

@@ -309,6 +309,39 @@
           </div>
         </template>
 
+        <!-- CRM -->
+        <template v-if="showCRM()">
+          <button
+            @click="toggleDropdown('crm')"
+            class="nav-item group w-full"
+            :class="{ 'bg-[#F5FAFF] text-[#229DE7]': dropdown.crm }"
+          >
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+              <IdentificationIcon class="nav-icon group-hover:text-[#229DE7]" />
+              <span class="nav-label">CRM</span>
+            </div>
+            <ChevronDownIcon
+              :class="[
+                'w-3.5 h-3.5 flex-shrink-0 transform transition-transform text-slate-400',
+                dropdown.crm ? 'rotate-180' : '',
+              ]"
+            />
+          </button>
+          <div v-show="dropdown.crm" class="ml-7 mt-0.5 space-y-0.5">
+            <router-link
+              v-for="item in crmMenu"
+              :key="item.to"
+              :to="item.to"
+              class="sub-nav-item"
+              active-class="sub-nav-item-active"
+              @click="$emit('close')"
+            >
+              <span class="w-1.5 h-1.5 rounded-full bg-[#229DE7] flex-shrink-0"></span>
+              <span>{{ item.label }}</span>
+            </router-link>
+          </div>
+        </template>
+
         <!-- Settings -->
         <template v-if="showSettings()">
           <button
@@ -406,6 +439,7 @@ import {
   ShoppingCartIcon,
   UsersIcon,
   UserGroupIcon,
+  IdentificationIcon,
   ChartBarIcon,
   BanknotesIcon,
   Cog6ToothIcon,
@@ -441,6 +475,7 @@ const dropdown = reactive({
   expenses: false,
   ecommerce: false,
   hrm: false,
+  crm: false,
   settings: false,
 });
 
@@ -493,6 +528,8 @@ const showHRM = () =>
     // "hr.attendance",
     // "roles.manage",
   ]);
+
+const showCRM = () => canAny(["crm.contacts", "crm.companies", "crm.tags", "crm.sources", "crm.deals", "crm.pipeline_settings", "crm.activities", "crm.campaigns", "crm.dashboard"]);
 
 const showEcommerce = () => can("ecommerce.manage");
 
@@ -550,6 +587,18 @@ const hrmMenu = [
   { label: "Payroll", to: "/hrm/payroll", perm: "staff.manage" },
   { label: "Salary Advances", to: "/hrm/salary-advances", perm: "staff.manage" },
   { label: "Payroll Config", to: "/hrm/payroll/config", perm: "staff.manage" },
+];
+
+const crmMenu = [
+  { label: "Dashboard", to: "/crm/dashboard", perm: "crm.dashboard" },
+  { label: "My Tasks", to: "/crm/my-tasks", perm: "crm.activities" },
+  { label: "Deals", to: "/crm/deals", perm: "crm.deals" },
+  { label: "Contacts", to: "/crm/contacts", perm: "crm.contacts" },
+  { label: "Companies", to: "/crm/companies", perm: "crm.companies" },
+  { label: "Sources", to: "/crm/sources", perm: "crm.sources" },
+  { label: "Tags", to: "/crm/tags", perm: "crm.tags" },
+  { label: "Pipeline Stages", to: "/crm/pipeline-stages", perm: "crm.pipeline_settings" },
+  { label: "Campaigns", to: "/crm/campaigns", perm: "crm.campaigns" },
 ];
 
 const ecommerceMenu = [

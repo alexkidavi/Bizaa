@@ -671,6 +671,9 @@ const formatPermissionName = (name) => {
     "roles.manage": "Manage Roles",
     "mpesa.pay": "M-Pesa Payments",
     "mpesa.status": "M-Pesa Status",
+    "crm.deals.view_all": "View All Deals (not just assigned)",
+    "crm.contacts.view_all": "View All Contacts (not just assigned)",
+    "crm.activities.view_all": "View All Activities (not just assigned)",
   };
 
   if (specialFormats[name]) {
@@ -734,6 +737,9 @@ const getPermissionDescription = (name) => {
     "roles.manage": "Create and edit roles",
     "mpesa.pay": "Process M-Pesa payments",
     "mpesa.status": "Check M-Pesa transaction status",
+    "crm.deals.view_all": "Without this, a user with deal access only sees deals assigned to them",
+    "crm.contacts.view_all": "Without this, a user with contact access only sees contacts assigned to them",
+    "crm.activities.view_all": "Without this, a user with activity access only sees activities assigned to them",
   };
 
   return (

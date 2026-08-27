@@ -57,6 +57,15 @@ use App\Http\Controllers\{
     PayrollPeriodController,
     PayslipController,
     SalaryAdvanceController,
+    CrmCompanyController,
+    CrmContactController,
+    CrmTagController,
+    CrmSourceController,
+    CrmPipelineStageController,
+    CrmDealController,
+    CrmActivityController,
+    CrmCampaignController,
+    CrmDashboardController,
     SubscriptionController,
     EcommerceStoreController,
     MarketplaceController
@@ -669,6 +678,63 @@ Route::middleware(['auth:api', 'subscription'])->prefix('hrm')->group(function (
         ->middleware('permission:hr.salary_advances');
 });
 // verify-token moved into the auth group above
+/*
+|--------------------------------------------------------------------------
+| CRM
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth:api', 'subscription'])->prefix('crm')->group(function () {
+
+    Route::apiResource('companies', CrmCompanyController::class)
+        ->middleware('permission:crm.companies');
+
+    Route::apiResource('tags', CrmTagController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middleware('permission:crm.tags');
+
+    Route::apiResource('sources', CrmSourceController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middleware('permission:crm.sources');
+
+    Route::apiResource('contacts', CrmContactController::class)
+        ->middleware('permission:crm.contacts');
+    Route::post('contacts/{id}/convert-to-customer', [CrmContactController::class, 'convertToCustomer'])
+        ->middleware('permission:crm.contacts');
+
+    Route::apiResource('pipeline-stages', CrmPipelineStageController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middleware('permission:crm.pipeline_settings');
+
+    Route::apiResource('deals', CrmDealController::class)
+        ->middleware('permission:crm.deals');
+    Route::patch('deals/{id}/move-stage', [CrmDealController::class, 'moveStage'])
+        ->middleware('permission:crm.deals');
+    Route::patch('deals/{id}/mark-won', [CrmDealController::class, 'markWon'])
+        ->middleware('permission:crm.deals');
+    Route::patch('deals/{id}/mark-lost', [CrmDealController::class, 'markLost'])
+        ->middleware('permission:crm.deals');
+    Route::post('deals/{id}/link-quotation', [CrmDealController::class, 'linkQuotation'])
+        ->middleware('permission:crm.deals');
+    Route::post('deals/{id}/link-sale', [CrmDealController::class, 'linkSale'])
+        ->middleware('permission:crm.deals');
+
+    Route::apiResource('activities', CrmActivityController::class)
+        ->middleware('permission:crm.activities');
+    Route::patch('activities/{id}/complete', [CrmActivityController::class, 'complete'])
+        ->middleware('permission:crm.activities');
+    Route::patch('activities/{id}/reopen', [CrmActivityController::class, 'reopen'])
+        ->middleware('permission:crm.activities');
+
+    Route::apiResource('campaigns', CrmCampaignController::class)
+        ->middleware('permission:crm.campaigns');
+    Route::post('campaigns/preview-recipients', [CrmCampaignController::class, 'previewRecipients'])
+        ->middleware('permission:crm.campaigns');
+    Route::post('campaigns/{id}/send', [CrmCampaignController::class, 'send'])
+        ->middleware('permission:crm.campaigns');
+
+    Route::get('dashboard', [CrmDashboardController::class, 'index'])
+        ->middleware('permission:crm.dashboard');
+});
 /*
 |--------------------------------------------------------------------------
 | DASHBOARD + BUSINESS
