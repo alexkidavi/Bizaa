@@ -12,11 +12,7 @@
       </div>
       <button
         @click="openCreateModal"
-        :disabled="isAdminRoleSelected"
-        class="cursor-pointer flex items-center gap-2 px-5 py-2.5 bg-[#229DE7] hover:bg-[#1682C4] text-white text-sm font-bold rounded-xl shadow-md shadow-[#229DE7]/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-        :title="
-          isAdminRoleSelected ? 'Cannot create new role while Admin is selected' : ''
-        "
+        class="cursor-pointer flex items-center gap-2 px-5 py-2.5 bg-[#229DE7] hover:bg-[#1682C4] text-white text-sm font-bold rounded-xl shadow-md shadow-[#229DE7]/30 transition-all active:scale-[0.98]"
       >
         <svg
           class="w-4 h-4"
@@ -566,10 +562,6 @@ const isAdminRole = (roleName) => {
 };
 
 /* ─── COMPUTED ────────────────────────── */
-const isAdminRoleSelected = computed(() => {
-  return selectedRole.value && isAdminRole(selectedRole.value.name);
-});
-
 const filteredRoles = computed(() => {
   if (!searchQuery.value) return roles.value;
   return roles.value.filter((role) =>
@@ -666,6 +658,7 @@ const formatPermissionName = (name) => {
     "quotations.convert": "Convert Quotations",
     "expenses.manage": "Manage Expenses",
     "expense_categories.manage": "Manage Expense Categories",
+    "hr.employees": "Manage Employees",
     "hr.departments": "Manage Departments",
     "hr.shifts": "Manage Shifts",
     "hr.attendance": "Manage Attendance",
@@ -728,6 +721,7 @@ const getPermissionDescription = (name) => {
     "quotations.convert": "Convert quotations to sales",
     "expenses.manage": "Manage business expenses",
     "expense_categories.manage": "Manage expense categories",
+    "hr.employees": "Manage employee HR profiles",
     "hr.departments": "Manage company departments",
     "hr.shifts": "Manage work shifts",
     "hr.attendance": "Manage staff attendance",

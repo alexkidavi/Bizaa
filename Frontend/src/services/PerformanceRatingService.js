@@ -1,22 +1,18 @@
 import api from "./api";
 
-const BASE = "/hrm/payroll";
+const BASE = "/hrm/performance-ratings";
 
 export default {
   async getAll(params = {}) {
     const res = await api.get(BASE, { params });
     return res.data;
   },
-  async generate(month, year) {
-    const res = await api.post(`${BASE}/generate`, { month, year });
+  async create(payload) {
+    const res = await api.post(BASE, payload);
     return res.data;
   },
   async update(id, payload) {
-    const res = await api.patch(`${BASE}/${id}`, payload);
-    return res.data;
-  },
-  async markPaid(id) {
-    const res = await api.patch(`${BASE}/${id}/pay`);
+    const res = await api.put(`${BASE}/${id}`, payload);
     return res.data;
   },
   async remove(id) {

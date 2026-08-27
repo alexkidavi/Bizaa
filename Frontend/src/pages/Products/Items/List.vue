@@ -484,6 +484,7 @@ const margin = (p) =>
   Math.round(((p.selling_price - p.buying_price) / p.selling_price) * 100);
 
 const stockBadge = (stock) => {
+  stock = Number(stock); // decimal-cast backend field arrives as a string
   if (stock === 0)
     return {
       label: "Out of Stock",

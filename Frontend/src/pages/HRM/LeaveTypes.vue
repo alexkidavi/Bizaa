@@ -3,7 +3,7 @@
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-7">
       <div>
         <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Leave Types</h1>
-        <p class="text-slate-500 mt-1 text-sm">Define leave categories and allowances.</p>
+        <p class="text-slate-500 mt-1 text-sm">Define leave categories, accrual rules and eligibility.</p>
       </div>
     </div>
 
@@ -16,7 +16,7 @@
             <h2 class="font-extrabold text-sm uppercase tracking-widest text-[#1682C4]">{{ editingId ? 'Edit Leave Type' : 'Add Leave Type' }}</h2>
             <button v-if="editingId" @click="resetForm" class="text-xs font-bold text-slate-400 hover:text-red-500 transition">Cancel</button>
           </div>
-          <form @submit.prevent="save" class="p-6 space-y-4">
+          <form @submit.prevent="save" class="p-6 space-y-4 max-h-[calc(100vh-160px)] overflow-y-auto">
             <div>
               <label class="field-label required">Name</label>
               <input v-model="form.name" type="text" class="field-input" :class="{ 'border-red-400': errors.name }" placeholder="e.g. Annual Leave" />
@@ -31,6 +31,61 @@
               <label class="field-label">Description</label>
               <textarea v-model="form.description" rows="2" class="field-input" placeholder="Optional description"></textarea>
             </div>
+
+            <div class="pt-2 border-t border-[#EEF5FB]">
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Accrual & Carry-Forward</p>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="field-label">Accrual Rule</label>
+                  <select v-model="form.accrual_rule" class="field-input">
+                    <option value="none">None (full grant)</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="annual">Annual</option>
+                  </select>
+                </div>
+                <div v-if="form.accrual_rule !== 'none'">
+                  <label class="field-label">Accrual Rate (days)</label>
+                  <input v-model="form.accrual_rate" type="number" step="0.01" min="0" class="field-input" placeholder="e.g. 1.75" />
+                </div>
+              </div>
+              <label class="flex items-center gap-2 mt-3 cursor-pointer select-none">
+                <input v-model="form.carry_forward_allowed" type="checkbox" class="w-4 h-4 rounded border-[#D9EBF7] text-[#229DE7] focus:ring-[#229DE7]" />
+                <span class="text-xs font-bold text-slate-600">Allow carry-forward to next year</span>
+              </label>
+              <div v-if="form.carry_forward_allowed" class="mt-2">
+                <label class="field-label">Max Carry-Forward Days</label>
+                <input v-model="form.max_carry_forward_days" type="number" min="0" class="field-input" placeholder="e.g. 5" />
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-[#EEF5FB]">
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Eligibility & Rules</p>
+              <label class="field-label">Gender Eligibility</label>
+              <select v-model="form.gender_eligibility" class="field-input mb-3">
+                <option :value="null">Any gender</option>
+                <option value="male">Male only</option>
+                <option value="female">Female only</option>
+              </select>
+              <div class="space-y-2">
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                  <input v-model="form.is_paid" type="checkbox" class="w-4 h-4 rounded border-[#D9EBF7] text-[#229DE7] focus:ring-[#229DE7]" />
+                  <span class="text-xs font-bold text-slate-600">Paid leave (tracked against balance)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                  <input v-model="form.requires_approval" type="checkbox" class="w-4 h-4 rounded border-[#D9EBF7] text-[#229DE7] focus:ring-[#229DE7]" />
+                  <span class="text-xs font-bold text-slate-600">Requires approval</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                  <input v-model="form.requires_documentation" type="checkbox" class="w-4 h-4 rounded border-[#D9EBF7] text-[#229DE7] focus:ring-[#229DE7]" />
+                  <span class="text-xs font-bold text-slate-600">Requires supporting documents</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                  <input v-model="form.is_active" type="checkbox" class="w-4 h-4 rounded border-[#D9EBF7] text-[#229DE7] focus:ring-[#229DE7]" />
+                  <span class="text-xs font-bold text-slate-600">Active (selectable on new requests)</span>
+                </label>
+              </div>
+            </div>
+
             <button type="submit" :disabled="loading" class="w-full flex items-center justify-center gap-2 py-3 bg-[#229DE7] hover:bg-[#1682C4] text-white text-sm font-bold rounded-xl shadow-md shadow-[#229DE7]/30 transition-all disabled:opacity-60">
               <svg v-if="loading" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
               {{ loading ? 'Saving...' : editingId ? 'Update' : 'Add Leave Type' }}
@@ -59,7 +114,8 @@
                   <th class="px-5 py-3.5 w-10">#</th>
                   <th class="px-5 py-3.5">Leave Type</th>
                   <th class="px-5 py-3.5 text-center">Days/Year</th>
-                  <th class="px-5 py-3.5 text-center">Total Used</th>
+                  <th class="px-5 py-3.5">Rules</th>
+                  <th class="px-5 py-3.5 text-center">Used</th>
                   <th class="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -69,9 +125,19 @@
                   <td class="px-5 py-4">
                     <p class="font-bold text-sm text-slate-900">{{ lt.name }}</p>
                     <p v-if="lt.description" class="text-xs text-slate-400">{{ lt.description }}</p>
+                    <span v-if="!lt.is_active" class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500">Inactive</span>
                   </td>
                   <td class="px-5 py-4 text-center">
                     <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#EAF5FD] text-[#1682C4]">{{ lt.days_allowed }}</span>
+                  </td>
+                  <td class="px-5 py-4">
+                    <div class="flex flex-wrap gap-1">
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="lt.is_paid ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'">{{ lt.is_paid ? 'Paid' : 'Unpaid' }}</span>
+                      <span v-if="lt.accrual_rule !== 'none'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 capitalize">{{ lt.accrual_rule }} accrual</span>
+                      <span v-if="lt.carry_forward_allowed" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-50 text-violet-700">Carries fwd</span>
+                      <span v-if="lt.gender_eligibility" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-50 text-pink-700 capitalize">{{ lt.gender_eligibility }} only</span>
+                      <span v-if="lt.requires_documentation" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700">Docs req.</span>
+                    </div>
                   </td>
                   <td class="px-5 py-4 text-center">
                     <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700">{{ lt.leaves_count ?? 0 }}</span>
@@ -105,7 +171,13 @@ const tableLoading = ref(true)
 const loading = ref(false)
 const editingId = ref(null)
 const leaveTypes = ref([])
-const form = reactive({ name: '', days_allowed: '', description: '' })
+
+const defaultForm = () => ({
+  name: '', days_allowed: '', description: '',
+  accrual_rule: 'none', accrual_rate: '', carry_forward_allowed: false, max_carry_forward_days: '',
+  gender_eligibility: null, requires_documentation: false, requires_approval: true, is_paid: true, is_active: true,
+})
+const form = reactive(defaultForm())
 const errors = reactive({ name: false, days: false })
 
 const toast = (icon, title) => Swal.fire({ icon, title, toast: true, position: 'top-end', showConfirmButton: false, timer: 2500, timerProgressBar: true })
@@ -123,7 +195,20 @@ const save = async () => {
   if (errors.name || errors.days) return
   loading.value = true
   try {
-    const payload = { name: form.name.trim(), days_allowed: Number(form.days_allowed), description: form.description }
+    const payload = {
+      name: form.name.trim(),
+      days_allowed: Number(form.days_allowed),
+      description: form.description || null,
+      accrual_rule: form.accrual_rule,
+      accrual_rate: form.accrual_rule !== 'none' && form.accrual_rate !== '' ? Number(form.accrual_rate) : null,
+      carry_forward_allowed: form.carry_forward_allowed,
+      max_carry_forward_days: form.carry_forward_allowed && form.max_carry_forward_days !== '' ? Number(form.max_carry_forward_days) : null,
+      gender_eligibility: form.gender_eligibility || null,
+      requires_documentation: form.requires_documentation,
+      requires_approval: form.requires_approval,
+      is_paid: form.is_paid,
+      is_active: form.is_active,
+    }
     if (editingId.value) {
       const res = await LeaveTypeService.update(editingId.value, payload)
       const idx = leaveTypes.value.findIndex(l => l.id === editingId.value)
@@ -140,14 +225,33 @@ const save = async () => {
   } finally { loading.value = false }
 }
 
-const edit = (lt) => { editingId.value = lt.id; form.name = lt.name; form.days_allowed = lt.days_allowed; form.description = lt.description || '' }
+const edit = (lt) => {
+  editingId.value = lt.id
+  form.name = lt.name
+  form.days_allowed = lt.days_allowed
+  form.description = lt.description || ''
+  form.accrual_rule = lt.accrual_rule || 'none'
+  form.accrual_rate = lt.accrual_rate ?? ''
+  form.carry_forward_allowed = !!lt.carry_forward_allowed
+  form.max_carry_forward_days = lt.max_carry_forward_days ?? ''
+  form.gender_eligibility = lt.gender_eligibility || null
+  form.requires_documentation = !!lt.requires_documentation
+  form.requires_approval = lt.requires_approval !== false
+  form.is_paid = lt.is_paid !== false
+  form.is_active = lt.is_active !== false
+}
+
 const remove = async (id) => {
   const r = await Swal.fire({ title: 'Delete leave type?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#229DE7', cancelButtonColor: '#f43f5e', confirmButtonText: 'Yes, delete' })
   if (!r.isConfirmed) return
   try { await LeaveTypeService.remove(id); leaveTypes.value = leaveTypes.value.filter(l => l.id !== id); toast('success', 'Deleted') }
   catch { Swal.fire({ icon: 'error', title: 'Delete Failed', confirmButtonColor: '#229DE7' }) }
 }
-const resetForm = () => { editingId.value = null; form.name = ''; form.days_allowed = ''; form.description = ''; errors.name = false; errors.days = false }
+const resetForm = () => {
+  editingId.value = null
+  Object.assign(form, defaultForm())
+  errors.name = false; errors.days = false
+}
 </script>
 
 <style scoped>

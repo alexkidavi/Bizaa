@@ -28,16 +28,35 @@ use App\Http\Controllers\{
     ReportController,
     ReportExportController,
     DashboardController,
+    BankController,
     ExpenseCategoryController,
     ExpenseController,
     DepartmentController,
+    EmployeeProfileController,
+    AwardTypeController,
+    AwardController,
+    WarningTypeController,
+    WarningController,
+    ResignationController,
+    TerminationTypeController,
+    TerminationController,
+    PerformanceCycleController,
+    PerformanceRatingController,
+    PerformanceReviewController,
     DigitaxController,
     ShiftController,
     AttendanceController,
     OvertimeController,
     LeaveTypeController,
     LeaveController,
-    PayrollController,
+    LeaveBalanceController,
+    PayrollSalaryComponentController,
+    PayrollTaxBandController,
+    PayrollStatutoryRateController,
+    PayrollSettingController,
+    PayrollPeriodController,
+    PayslipController,
+    SalaryAdvanceController,
     SubscriptionController,
     EcommerceStoreController,
     MarketplaceController
@@ -508,6 +527,65 @@ Route::middleware(['auth:api', 'subscription'])->prefix('reports')->group(functi
 */
 Route::middleware(['auth:api', 'subscription'])->prefix('hrm')->group(function () {
 
+    Route::prefix('employees')->middleware('permission:hr.employees')->group(function () {
+        Route::get('/', [EmployeeProfileController::class, 'index']);
+        Route::post('/', [EmployeeProfileController::class, 'store']);
+        Route::get('/{id}', [EmployeeProfileController::class, 'show']);
+        Route::put('/{id}', [EmployeeProfileController::class, 'update']);
+        Route::delete('/{id}', [EmployeeProfileController::class, 'destroy']);
+        Route::patch('/{id}/status', [EmployeeProfileController::class, 'updateStatus']);
+        Route::get('/{id}/history', [EmployeeProfileController::class, 'history']);
+        Route::delete('/{id}/documents', [EmployeeProfileController::class, 'removeDocument']);
+        Route::get('/{id}/documents/download', [EmployeeProfileController::class, 'downloadDocument']);
+    });
+
+    Route::apiResource('award-types', AwardTypeController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middleware('permission:hr.awards');
+
+    Route::apiResource('awards', AwardController::class)
+        ->middleware('permission:hr.awards');
+    Route::get('awards/{id}/document', [AwardController::class, 'downloadDocument'])
+        ->middleware('permission:hr.awards');
+
+    Route::apiResource('warning-types', WarningTypeController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middleware('permission:hr.warnings');
+
+    Route::apiResource('warnings', WarningController::class)
+        ->middleware('permission:hr.warnings');
+    Route::get('warnings/{id}/document', [WarningController::class, 'downloadDocument'])
+        ->middleware('permission:hr.warnings');
+
+    Route::apiResource('resignations', ResignationController::class)
+        ->middleware('permission:hr.resignations');
+    Route::patch('resignations/{id}/status', [ResignationController::class, 'updateStatus'])
+        ->middleware('permission:hr.resignations');
+    Route::get('resignations/{id}/document', [ResignationController::class, 'downloadDocument'])
+        ->middleware('permission:hr.resignations');
+
+    Route::apiResource('termination-types', TerminationTypeController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middleware('permission:hr.terminations');
+
+    Route::apiResource('terminations', TerminationController::class)
+        ->middleware('permission:hr.terminations');
+    Route::patch('terminations/{id}/status', [TerminationController::class, 'updateStatus'])
+        ->middleware('permission:hr.terminations');
+    Route::get('terminations/{id}/document', [TerminationController::class, 'downloadDocument'])
+        ->middleware('permission:hr.terminations');
+
+    Route::apiResource('performance-cycles', PerformanceCycleController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middleware('permission:hr.performance');
+
+    Route::apiResource('performance-ratings', PerformanceRatingController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middleware('permission:hr.performance');
+
+    Route::apiResource('performance-reviews', PerformanceReviewController::class)
+        ->middleware('permission:hr.performance');
+
     Route::apiResource('departments', DepartmentController::class)
         ->middleware('permission:hr.departments');
 
@@ -520,11 +598,75 @@ Route::middleware(['auth:api', 'subscription'])->prefix('hrm')->group(function (
     Route::apiResource('overtimes', OvertimeController::class)
         ->middleware('permission:hr.overtime');
 
-    Route::apiResource('leaves', LeaveController::class)
+    Route::apiResource('leave-types', LeaveTypeController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
         ->middleware('permission:hr.leaves');
 
-    Route::apiResource('payroll', PayrollController::class)
+    Route::apiResource('leaves', LeaveController::class)
+        ->middleware('permission:hr.leaves');
+    Route::patch('leaves/{id}/status', [LeaveController::class, 'updateStatus'])
+        ->middleware('permission:hr.leaves');
+    Route::get('leaves/{id}/document', [LeaveController::class, 'downloadDocument'])
+        ->middleware('permission:hr.leaves');
+
+    Route::get('leave-balances/ensure', [LeaveBalanceController::class, 'ensureForYear'])
+        ->middleware('permission:hr.leaves');
+    Route::get('leave-balances', [LeaveBalanceController::class, 'index'])
+        ->middleware('permission:hr.leaves');
+    Route::get('leave-balances/{id}', [LeaveBalanceController::class, 'show'])
+        ->middleware('permission:hr.leaves');
+    Route::patch('leave-balances/{id}/adjust', [LeaveBalanceController::class, 'adjust'])
+        ->middleware('permission:hr.leaves');
+    Route::get('leave-balances/{id}/history', [LeaveBalanceController::class, 'history'])
+        ->middleware('permission:hr.leaves');
+
+    Route::apiResource('payroll-components', PayrollSalaryComponentController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middleware('permission:hr.payroll_config');
+
+    Route::apiResource('payroll-tax-bands', PayrollTaxBandController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middleware('permission:hr.payroll_config');
+
+    Route::apiResource('payroll-statutory-rates', PayrollStatutoryRateController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middleware('permission:hr.payroll_config');
+
+    Route::get('payroll-settings', [PayrollSettingController::class, 'show'])
+        ->middleware('permission:hr.payroll_config');
+    Route::put('payroll-settings', [PayrollSettingController::class, 'update'])
+        ->middleware('permission:hr.payroll_config');
+
+    Route::apiResource('payroll-periods', PayrollPeriodController::class)
+        ->only(['index', 'store', 'show', 'destroy'])
         ->middleware('permission:hr.payroll');
+    Route::post('payroll-periods/{id}/calculate', [PayrollPeriodController::class, 'calculate'])
+        ->middleware('permission:hr.payroll');
+    Route::patch('payroll-periods/{id}/cancel', [PayrollPeriodController::class, 'cancel'])
+        ->middleware('permission:hr.payroll');
+    Route::patch('payroll-periods/{id}/approve', [PayrollPeriodController::class, 'approve'])
+        ->middleware('permission:hr.payroll.approve');
+    Route::patch('payroll-periods/{id}/finalize', [PayrollPeriodController::class, 'finalize'])
+        ->middleware('permission:hr.payroll.approve');
+    Route::patch('payroll-periods/{id}/pay', [PayrollPeriodController::class, 'markPaid'])
+        ->middleware('permission:hr.payroll.pay');
+    Route::patch('payroll-periods/{id}/payslips/{payslipId}/exclude', [PayrollPeriodController::class, 'toggleExclude'])
+        ->middleware('permission:hr.payroll');
+
+    Route::get('payslips/{id}', [PayslipController::class, 'show'])
+        ->middleware('permission:hr.payroll');
+    Route::get('payslips/{id}/pdf', [PayslipController::class, 'pdf'])
+        ->middleware('permission:hr.payroll');
+
+    Route::apiResource('salary-advances', SalaryAdvanceController::class)
+        ->only(['index', 'store', 'show', 'destroy'])
+        ->middleware('permission:hr.salary_advances');
+    Route::patch('salary-advances/{id}/approve', [SalaryAdvanceController::class, 'approve'])
+        ->middleware('permission:hr.salary_advances');
+    Route::patch('salary-advances/{id}/reject', [SalaryAdvanceController::class, 'reject'])
+        ->middleware('permission:hr.salary_advances');
+    Route::patch('salary-advances/{id}/cancel', [SalaryAdvanceController::class, 'cancel'])
+        ->middleware('permission:hr.salary_advances');
 });
 // verify-token moved into the auth group above
 /*
@@ -554,6 +696,10 @@ Route::middleware(['auth:api', 'subscription'])->group(function () {
 
     Route::post('/business/digitax', [BusinessController::class, 'updateDigitax'])
         ->middleware('permission:business.update');
+
+    Route::apiResource('banks', BankController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middleware('permission:banks.manage');
 });
 Route::middleware('auth:api')->get('/me', function (Request $request) {
 

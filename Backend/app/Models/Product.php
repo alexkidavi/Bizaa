@@ -51,6 +51,8 @@ class Product extends Model
     protected $casts = [
         'tags' => 'array',
         'digitax_synced_at' => 'datetime',
+        'opening_stock' => 'decimal:4',
+        'current_stock' => 'decimal:4',
     ];
 
     /*

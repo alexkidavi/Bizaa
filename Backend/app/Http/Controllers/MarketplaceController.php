@@ -119,7 +119,7 @@ class MarketplaceController extends Controller
             'category_id'       => $p?->category_id,
             'brand'             => $p?->brand?->name,
             'selling_price'     => (float) ($pb->selling_price ?? $p?->selling_price ?? 0),
-            'stock'             => (int) $pb->stock,
+            'stock'             => (float) $pb->stock,
             'short_description' => $p?->short_description,
             'store_name'        => $store?->name,
             'store_slug'        => $store?->slug,

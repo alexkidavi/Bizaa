@@ -37,9 +37,9 @@ class RoleController extends Controller
     {
         $this->authorize('create', Role::class);
 
-        $this->service->create($request->validated());
+        $role = $this->service->create($request->validated());
 
-        return response()->json(['status' => 200]);
+        return response()->json(['status' => 200, 'data' => $role]);
     }
 
     public function assignPermissions(AssignRolePermissionsRequest $request, $roleId): JsonResponse
@@ -57,9 +57,9 @@ class RoleController extends Controller
         $role = $this->service->findForAuthorization((int) $id);
         $this->authorize('update', $role);
 
-        $this->service->update((int) $id, $request->validated());
+        $updated = $this->service->update((int) $id, $request->validated());
 
-        return response()->json(['message' => 'Role updated']);
+        return response()->json(['message' => 'Role updated', 'data' => $updated]);
     }
 
     public function destroy($id): JsonResponse

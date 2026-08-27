@@ -24,6 +24,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Business
             'business.view',
             'business.update',
+            'banks.manage',
 
             // Products
             'products.view',
@@ -82,12 +83,22 @@ class RolesAndPermissionsSeeder extends Seeder
             'expense_categories.manage',
 
             // HR
+            'hr.employees',
+            'hr.awards',
+            'hr.warnings',
+            'hr.resignations',
+            'hr.terminations',
+            'hr.performance',
             'hr.departments',
             'hr.shifts',
             'hr.attendance',
             'hr.overtime',
             'hr.leaves',
             'hr.payroll',
+            'hr.payroll.approve',
+            'hr.payroll.pay',
+            'hr.payroll_config',
+            'hr.salary_advances',
 
             // Reports
             'reports.view',
@@ -95,6 +106,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Staff
             'staff.manage',
             'roles.view',
+            'roles.manage',
 
             // MPESA
             'mpesa.pay',
@@ -135,7 +147,8 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $manager->permissions()->sync(
             Permission::whereNotIn('name', [
-                'roles.view'
+                'roles.view',
+                'roles.manage',
             ])->pluck('id')
         );
 
@@ -198,12 +211,20 @@ class RolesAndPermissionsSeeder extends Seeder
         $hr->permissions()->sync(
             Permission::whereIn('name', [
                 'dashboard.view',
+                'hr.employees',
+                'hr.awards',
+                'hr.warnings',
+                'hr.resignations',
+                'hr.terminations',
+                'hr.performance',
                 'hr.departments',
                 'hr.shifts',
                 'hr.attendance',
                 'hr.overtime',
                 'hr.leaves',
                 'hr.payroll',
+                'hr.payroll_config',
+                'hr.salary_advances',
                 'staff.manage',
             ])->pluck('id')
         );

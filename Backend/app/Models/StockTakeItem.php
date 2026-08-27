@@ -17,6 +17,11 @@ class StockTakeItem extends Model
         'variance'
     ];
 
+    protected $casts = [
+        'recorded_stock' => 'decimal:4',
+        'counted_stock' => 'decimal:4',
+    ];
+
     // 🔗 Relationships
     public function stockTake()
     {

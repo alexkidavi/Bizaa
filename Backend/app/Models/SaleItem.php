@@ -15,6 +15,10 @@ class SaleItem extends Model
         'note',
     ];
 
+    protected $casts = [
+        'quantity' => 'decimal:4',
+    ];
+
     /*
     |-----------------------------------
     | Relationships

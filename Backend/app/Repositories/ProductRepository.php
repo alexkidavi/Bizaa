@@ -27,7 +27,13 @@ public function all()
     $search   = request('search');
     $category = request('category');
     $category_id = request('category_id');
-    $branch   = request('branch');
+    // Two different callers use two different param names for the same
+    // thing (Products/Items/List.vue sends `branch`, the POS sends
+    // `branch_id`) — accept either so per-branch stock scoping actually
+    // applies regardless of which page is asking. Without this, `$branch`
+    // was always empty for POS requests, so stock always fell back to the
+    // ALL-BRANCHES total instead of the selected branch's real figure.
+    $branch   = request('branch') ?: request('branch_id');
     $stock    = request('stock');
     $query = $this->model->with([
         'category:id,name',

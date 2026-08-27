@@ -49,6 +49,7 @@
         :settings="settings"
         @saved="settings = $event"
       />
+      <BanksTab v-else-if="activeTab === 'banks'" />
     </template>
   </div>
 </template>
@@ -63,6 +64,7 @@ import BusinessTab from "./tabs/BusinessTab.vue";
 import TaxTab from "./tabs/TaxTab.vue";
 import MpesaTab from "./tabs/MpesaTab.vue";
 import DigitaxTab from "./tabs/DigitaxTab.vue";
+import BanksTab from "./tabs/BanksTab.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -76,6 +78,7 @@ const allTabs = [
   { key: "tax", label: "Tax", requiresBusiness: true },
   { key: "mpesa", label: "M-Pesa Payments", requiresBusiness: true },
   { key: "digitax", label: "KRA eTIMS", requiresBusiness: true },
+  { key: "banks", label: "Banks", requiresBusiness: true },
 ];
 
 const visibleTabs = computed(() =>

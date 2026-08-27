@@ -429,7 +429,7 @@
               Inventory & Branches
             </h2>
             <div class="grid md:grid-cols-4 gap-5 mb-5">
-              <div>
+              <div v-if="!isEdit">
                 <label class="field-label"
                   >Opening Stock
                   <span class="text-slate-400 font-normal text-[11px]"

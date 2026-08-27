@@ -195,7 +195,28 @@ const updateClock = () => {
     second: "2-digit",
   });
 };
-const onBranchChange = (id) => {
+const onBranchChange = async (id) => {
+  if (String(id) === String(activeBranch.value)) return;
+
+  // Cart lines are a snapshot of the branch they were added under
+  // (product.current_stock, pricing) — carrying them across a branch
+  // switch would silently show stale stock/prices for the new branch.
+  // Clear (with confirmation) rather than leave them stale.
+  if (cart.value.length > 0) {
+    const r = await Swal.fire({
+      title: "Switch branch?",
+      text: "Your cart has items priced and stocked for the current branch. Switching branches will clear the cart so stock and pricing stay accurate.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Switch & Clear Cart",
+      confirmButtonColor: "#229DE7",
+      cancelButtonColor: "#94a3b8",
+    });
+    if (!r.isConfirmed) return; // activeBranch unchanged — the <select> snaps back via its reactive :value binding
+    cart.value = [];
+    globalDiscount.value = 0;
+  }
+
   activeBranch.value = id;
   productPage.value = 1;
   fetchProducts();
@@ -310,6 +331,10 @@ const addToCart = async (product) => {
     if (!isConfirmed || !amountStr) return;
     const amount = parseFloat(amountStr);
     const qty = product.selling_price > 0 ? amount / product.selling_price : 1;
+    if (qty > Number(product.current_stock ?? Infinity)) {
+      stockLimitReached(product);
+      return;
+    }
     const item = {
       ...product,
       qty,
@@ -326,9 +351,18 @@ const addToCart = async (product) => {
   }
 
   const existing = cart.value.find((i) => i.id === product.id && !i.enteredPrice);
+  const limit = Number(product.current_stock ?? Infinity);
   if (existing) {
+    if (existing.qty + 1 > limit) {
+      stockLimitReached(product);
+      return;
+    }
     existing.qty++;
     flash(existing);
+    return;
+  }
+  if (limit < 1) {
+    stockLimitReached(product);
     return;
   }
   const item = {
@@ -351,6 +385,22 @@ const flash = (item) => {
   }, 600);
 };
 
+// Client-side check only, for immediate feedback — the backend
+// (createPosSale, under a row lock) is the real source of truth and
+// re-validates against the actual database stock at checkout regardless.
+const stockLimitReached = (product) => {
+  Swal.fire({
+    icon: "warning",
+    title: "Stock limit reached",
+    text: `Only ${Number(product.current_stock ?? 0)} unit(s) of ${product.name} are available.`,
+    toast: true,
+    position: "top-end",
+    showConfirmButton: false,
+    timer: 2200,
+    timerProgressBar: true,
+  });
+};
+
 // On mobile, switch to cart tab after adding a product
 const onAddToCart = (product) => {
   addToCart(product);
@@ -364,6 +414,11 @@ const clearCart = () => {
 const increaseQty = (index) => {
   const i = cart.value[index];
   if (i.enteredPrice != null) return; // sell-by-price lines are fixed
+  const limit = Number(i.current_stock ?? Infinity);
+  if (i.qty + 1 > limit) {
+    stockLimitReached(i);
+    return;
+  }
   i.qty++;
 };
 const decreaseQty = (index) => {
@@ -376,6 +431,12 @@ const setQty = (index, val) => {
   const i = cart.value[index];
   if (i.enteredPrice != null) return;
   const q = parseFloat(val) || 1;
+  const limit = Number(i.current_stock ?? Infinity);
+  if (q > limit) {
+    stockLimitReached(i);
+    i.qty = Math.max(0.001, limit);
+    return;
+  }
   i.qty = Math.max(0.001, q);
 };
 const toggleItemDiscount = (index) => {

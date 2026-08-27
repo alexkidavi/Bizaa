@@ -23,5 +23,6 @@ protected $fillable = [
 
 protected $casts = [
     'digitax_synced_at' => 'datetime',
+    'quantity' => 'decimal:4',
 ];
 }

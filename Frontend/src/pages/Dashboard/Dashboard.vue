@@ -641,12 +641,12 @@
                 <span
                   class="text-[10px] font-extrabold ml-2 flex-shrink-0 px-2 py-0.5 rounded-full border"
                   :class="
-                    item.stock === 0
+                    Number(item.stock) === 0
                       ? 'bg-red-50 text-red-600 border-red-200'
                       : 'bg-amber-100 text-amber-700 border-amber-200'
                   "
                 >
-                  {{ item.stock === 0 ? "Out" : item.stock + " left" }}
+                  {{ Number(item.stock) === 0 ? "Out" : Number(item.stock) + " left" }}
                 </span>
               </div>
             </div>

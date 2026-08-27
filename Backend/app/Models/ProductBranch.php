@@ -21,6 +21,7 @@ class ProductBranch extends Model
 
     protected $casts = [
         'is_listed' => 'boolean',
+        'stock' => 'decimal:4',
     ];
 
     public function product()
@@ -39,19 +40,19 @@ class ProductBranch extends Model
     |--------------------------------------------------------------------------
     */
 
-    public function increaseStock(int $qty): void
+    public function increaseStock(float $qty): void
     {
         $this->stock += $qty;
         $this->save();
     }
 
-    public function decreaseStock(int $qty): void
+    public function decreaseStock(float $qty): void
     {
         $this->stock = max(0, $this->stock - $qty);
         $this->save();
     }
 
-    public function inStock(int $qty): bool
+    public function inStock(float $qty): bool
     {
         return $this->stock >= $qty;
     }

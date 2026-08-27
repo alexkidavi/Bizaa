@@ -151,32 +151,34 @@ public function stockTake(array $data)
         // ProductBranch has no business_id column of its own — tenancy is
         // enforced through the product and branch it belongs to, both of
         // which must match the caller's business.
-        $record = ProductBranch::whereHas('product', fn ($q) => $q->where('business_id', $businessId))
+        $exists = ProductBranch::whereHas('product', fn ($q) => $q->where('business_id', $businessId))
             ->whereHas('branch', fn ($q) => $q->where('business_id', $businessId))
             ->findOrFail($id);
 
-        $oldStock = $record->stock;
-        $newStock = $data['stock'] ?? $oldStock;
+        return DB::transaction(function () use ($id, $data) {
+            $record = ProductBranch::where('id', $id)->lockForUpdate()->firstOrFail();
 
-        $record->update([
-            'stock' => $newStock
-        ]);
+            $oldStock = (float) $record->stock;
+            $newStock = $data['stock'] ?? $oldStock;
 
-        $user = Auth::user();
+            $record->update(['stock' => $newStock]);
 
-        StockHistory::create([
-            'product_id' => $record->product_id,
-            'branch_id' => $record->branch_id,
-            'business_id' => $user->business_id,
-            'user_id' => $user->id,
-            'reference' => 'UPD-' . strtoupper(uniqid()),
-            'type' => 'adjustment',
-            'action' => 'set',
-            'quantity' => $newStock,
-            'notes' => $data['notes'] ?? 'Stock updated',
-        ]);
+            $user = Auth::user();
 
-        return $record;
+            StockHistory::create([
+                'product_id' => $record->product_id,
+                'branch_id' => $record->branch_id,
+                'business_id' => $user->business_id,
+                'user_id' => $user->id,
+                'reference' => 'UPD-' . strtoupper(uniqid()),
+                'type' => 'adjustment',
+                'action' => 'set',
+                'quantity' => $newStock,
+                'notes' => $data['notes'] ?? 'Stock updated',
+            ]);
+
+            return $record;
+        });
     }
 
     // ✅ DELETE
@@ -191,70 +193,78 @@ public function stockTake(array $data)
     $record->delete();
 }
 
-    // ✅ ADJUST (already good, kept as-is)
+    // ✅ ADJUST
     public function adjust($productId, $data)
     {
         $productId = Crypt::decryptString($productId);
         $businessId = Auth::user()->business_id;
 
         $branchId = $data['branch_id'];
-        $qty = (int) $data['quantity'];
+        // Was (int) — silently truncated fractional adjustments (e.g. 10.2
+        // kg) to whole units regardless of what the column could store.
+        $qty = (float) $data['quantity'];
         $action = $data['action'];
         $notes = $data['reason'] ?? null;
 
         $product = Product::where('id', $productId)->where('business_id', $businessId)->firstOrFail();
         $branch  = Branch::where('id', $branchId)->where('business_id', $businessId)->firstOrFail();
 
-        $record = ProductBranch::where('product_id', $product->id)
-            ->where('branch_id', $branch->id)
-            ->first();
+        return DB::transaction(function () use ($product, $branch, $qty, $action, $notes) {
+            // Make sure a row exists before locking it. A concurrent
+            // first-time adjustment for the same product/branch racing here
+            // is resolved by the unique(product_id, branch_id) constraint —
+            // the losing insert just fails and falls through to the locked
+            // read below, which will see the winner's row.
+            try {
+                ProductBranch::firstOrCreate(
+                    ['product_id' => $product->id, 'branch_id' => $branch->id],
+                    ['buying_price' => $product->buying_price, 'selling_price' => $product->selling_price, 'stock' => 0]
+                );
+            } catch (\Illuminate\Database\QueryException) {
+                // Another request created it first — fine.
+            }
 
-        if (!$record) {
-                $record = ProductBranch::create([
-                    'product_id' => $product->id,
-                    'branch_id' => $branch->id,
-                    'buying_price' => $product->buying_price,
-                    'selling_price' => $product->selling_price,
-                    'stock' => 0,
-                ]);
-        }
+            // Locked for the rest of this transaction so two concurrent
+            // adjustments (or an adjustment racing a POS sale) for the same
+            // product/branch can't both read the same stale stock figure.
+            $record = ProductBranch::where('product_id', $product->id)
+                ->where('branch_id', $branch->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $oldStock = $record->stock;
+            $oldStock = (float) $record->stock;
 
-        if ($action === 'set') {
-            $record->stock = $qty;
-        } elseif ($action === 'add') {
-            $record->stock += $qty;
-        } elseif ($action === 'remove') {
-            $record->stock -= $qty;
-        }
+            $newStock = match ($action) {
+                'set' => $qty,
+                'add' => $oldStock + $qty,
+                'remove' => $oldStock - $qty,
+                default => $oldStock,
+            };
 
-        if ($record->stock < 0) {
-            $record->stock = 0;
-        }
+            $record->stock = max(0, $newStock);
+            $record->save();
 
-        $record->save();
+            $user = Auth::user();
 
-        $user = Auth::user();
+            $history = StockHistory::create([
+                'product_id' => $product->id,
+                'branch_id' => $branch->id,
+                'business_id' => $user->business_id,
+                'user_id' => $user->id,
+                'reference' => 'ADJ-' . strtoupper(uniqid()),
+                'type' => 'adjustment',
+                'action' => $action,
+                'quantity' => $qty,
+                'notes' => $notes,
+            ]);
 
-        $history = StockHistory::create([
-            'product_id' => $product->id,
-            'branch_id' => $branch->id,
-            'business_id' => $user->business_id,
-            'user_id' => $user->id,
-            'reference' => 'ADJ-' . strtoupper(uniqid()),
-            'type' => 'adjustment',
-            'action' => $action,
-            'quantity' => $qty,
-            'notes' => $notes,
-        ]);
+            // Business-wide stock delta, same as the POS sale flow decrements
+            // directly at checkout — DigiTax's ledger has no branch concept.
+            $delta = (float) $record->stock - $oldStock;
+            $this->digitax->syncStockAdjustment($product, $history, $delta);
 
-        // Business-wide stock delta, same as the POS sale flow decrements
-        // directly at checkout — DigiTax's ledger has no branch concept.
-        $delta = $record->stock - $oldStock;
-        $this->digitax->syncStockAdjustment($product, $history, (float) $delta);
-
-        return $record;
+            return $record;
+        });
     }
 
     /**

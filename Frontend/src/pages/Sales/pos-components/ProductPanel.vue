@@ -174,8 +174,8 @@
           :key="p.id"
           @click="$emit('add-to-cart', p)"
           class="pos-product-card"
-          :class="{ 'out-of-stock': p.current_stock === 0 }"
-          :disabled="p.current_stock === 0"
+          :class="{ 'out-of-stock': stockOf(p) === 0 }"
+          :disabled="stockOf(p) === 0"
         >
           <!-- Loading overlay for stale results -->
           <div v-if="loading" class="card-loading-overlay"></div>
@@ -187,9 +187,9 @@
           </div>
           <div
             class="product-stock"
-            :class="{ low: p.current_stock > 0 && p.current_stock < 5 }"
+            :class="{ low: stockOf(p) > 0 && stockOf(p) < 5 }"
           >
-            {{ p.current_stock === 0 ? "Out of stock" : `${p.current_stock} left` }}
+            {{ stockOf(p) === 0 ? "Out of stock" : `${stockOf(p)} left` }}
           </div>
         </button>
       </div>
@@ -278,6 +278,11 @@ const searchQuery = ref("");
 const searchInput = ref(null);
 const gridEl = ref(null);
 let searchTimer = null;
+
+// current_stock arrives as a decimal-cast string (e.g. "0.0000") from the
+// backend, not a number — strict `=== 0` checks against it silently never
+// match. Normalize once here rather than at every comparison site.
+const stockOf = (p) => Number(p.current_stock ?? 0);
 
 const hasActiveQuery = computed(
   () => searchQuery.value.trim().length > 0 || props.activeCat !== null

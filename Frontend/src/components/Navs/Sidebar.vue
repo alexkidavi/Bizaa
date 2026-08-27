@@ -534,12 +534,22 @@ const expensesMenu = [
 ];
 
 const hrmMenu = [
-  { label: "Staff", to: "/hrm/staff", perm: "staff.manage" },
+  { label: "Staff Profiles", to: "/hrm/employees", perm: "staff.manage" },
+  { label: "Awards", to: "/hrm/awards", perm: "staff.manage" },
+  { label: "Warnings", to: "/hrm/warnings", perm: "staff.manage" },
+  { label: "Resignations", to: "/hrm/resignations", perm: "staff.manage" },
+  { label: "Terminations", to: "/hrm/terminations", perm: "staff.manage" },
+  { label: "Performance", to: "/hrm/performance", perm: "staff.manage" },
   { label: "Roles", to: "/roles/list", perm: "roles.manage" },
   { label: "Departments", to: "/hrm/departments", perm: "staff.manage" },
   { label: "Shifts", to: "/hrm/shifts", perm: "staff.manage" },
   { label: "Attendance", to: "/hrm/attendance", perm: "staff.manage" },
+  { label: "Leave Types", to: "/hrm/leave-types", perm: "staff.manage" },
+  { label: "Leaves", to: "/hrm/leaves", perm: "staff.manage" },
+  { label: "Leave Balances", to: "/hrm/leave-balances", perm: "staff.manage" },
   { label: "Payroll", to: "/hrm/payroll", perm: "staff.manage" },
+  { label: "Salary Advances", to: "/hrm/salary-advances", perm: "staff.manage" },
+  { label: "Payroll Config", to: "/hrm/payroll/config", perm: "staff.manage" },
 ];
 
 const ecommerceMenu = [

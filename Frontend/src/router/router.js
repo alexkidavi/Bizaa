@@ -313,42 +313,117 @@ const routes = [
       {
         path: "staff",
         component: StaffList,
-        meta: { permission: "staff.management" }
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "employees",
+        component: () => import("@/pages/HRM/Employees/EmployeeList.vue"),
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "employees/new",
+        component: () => import("@/pages/HRM/Employees/EmployeeForm.vue"),
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "employees/:id/edit",
+        component: () => import("@/pages/HRM/Employees/EmployeeForm.vue"),
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "employees/:id",
+        component: () => import("@/pages/HRM/Employees/EmployeeProfile.vue"),
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "awards",
+        component: () => import("@/pages/HRM/Awards.vue"),
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "warnings",
+        component: () => import("@/pages/HRM/Warnings.vue"),
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "resignations",
+        component: () => import("@/pages/HRM/Resignations.vue"),
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "terminations",
+        component: () => import("@/pages/HRM/Terminations.vue"),
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "performance",
+        component: () => import("@/pages/HRM/PerformanceReviews.vue"),
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "performance/new",
+        component: () => import("@/pages/HRM/PerformanceReviewForm.vue"),
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "performance/:id/edit",
+        component: () => import("@/pages/HRM/PerformanceReviewForm.vue"),
+        meta: { permission: "staff.manage" }
       },
       {
         path: "departments",
         component: () => import("@/pages/HRM/Departments.vue"),
-        meta: { permission: "staff.management" }
+        meta: { permission: "staff.manage" }
       },
       {
         path: "shifts",
         component: () => import("@/pages/HRM/Shifts.vue"),
-        meta: { permission: "staff.management" }
+        meta: { permission: "staff.manage" }
       },
       {
         path: "attendance",
         component: () => import("@/pages/HRM/Attendance.vue"),
-        meta: { permission: "staff.management" }
+        meta: { permission: "staff.manage" }
       },
       {
         path: "overtimes",
         component: () => import("@/pages/HRM/Overtimes.vue"),
-        meta: { permission: "staff.management" }
+        meta: { permission: "staff.manage" }
       },
       {
         path: "leave-types",
         component: () => import("@/pages/HRM/LeaveTypes.vue"),
-        meta: { permission: "staff.management" }
+        meta: { permission: "staff.manage" }
       },
       {
         path: "leaves",
         component: () => import("@/pages/HRM/Leaves.vue"),
-        meta: { permission: "staff.management" }
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "leave-balances",
+        component: () => import("@/pages/HRM/LeaveBalances.vue"),
+        meta: { permission: "staff.manage" }
       },
       {
         path: "payroll",
-        component: () => import("@/pages/HRM/Payroll.vue"),
-        meta: { permission: "staff.management" }
+        component: () => import("@/pages/HRM/PayrollPeriods.vue"),
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "payroll/config",
+        component: () => import("@/pages/HRM/PayrollConfig.vue"),
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "payroll/:id",
+        component: () => import("@/pages/HRM/PayrollPeriodDetail.vue"),
+        meta: { permission: "staff.manage" }
+      },
+      {
+        path: "salary-advances",
+        component: () => import("@/pages/HRM/SalaryAdvances.vue"),
+        meta: { permission: "staff.manage" }
       },
     ],
   },

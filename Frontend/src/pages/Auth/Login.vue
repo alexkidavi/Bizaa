@@ -270,6 +270,8 @@ const login = async () => {
   } catch (error) {
     if (error.response?.status === 401) {
       errorMessage.value = "Invalid email or password.";
+    } else if (error.response?.status === 403) {
+      errorMessage.value = error.response?.data?.message || "This account has been deactivated.";
     } else if (error.response?.status === 429) {
       errorMessage.value = "Too many attempts. Try later.";
     } else if (error.response?.status === 500) {

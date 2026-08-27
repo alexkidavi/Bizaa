@@ -7,6 +7,7 @@ use App\Models\ProductBranch;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\SalePayment;
+use App\Models\StockHistory;
 use App\Repositories\Contracts\SaleRepositoryInterface;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -51,10 +52,12 @@ class SaleRepository implements SaleRepositoryInterface
             */
             foreach ($data['items'] as $item) {
                 $productId = Crypt::decryptString($item['product_id']);
+                $quantity = (float) $item['quantity'];
+
                 SaleItem::create([
                     'sale_id'     => $sale->id,
                     'product_id'  => $productId,
-                    'quantity'    => $item['quantity'],
+                    'quantity'    => $quantity,
                     'unit_price'  => $item['unit_price'],
                     'discount'    => $item['discount'] ?? 0,
                     'note'        => $item['note'] ?? null,
@@ -70,13 +73,28 @@ class SaleRepository implements SaleRepositoryInterface
                     ->lockForUpdate()
                     ->first();
 
-                if ($productBranch) {
-                    if ($productBranch->stock < $item['quantity']) {
-                        throw new \Exception("Insufficient stock for product ID {$productId}");
-                    }
-
-                    $productBranch->decrement('stock', $item['quantity']);
+                // No product_branch row at all means zero stock has ever
+                // been provisioned for this product at this branch — that
+                // used to silently skip the check (and the decrement),
+                // letting it sell without limit. Treat it the same as an
+                // insufficient-stock row: block the sale.
+                if (!$productBranch || (float) $productBranch->stock < $quantity) {
+                    throw new \Exception("Insufficient stock for product ID {$productId}");
                 }
+
+                $productBranch->decrement('stock', $quantity);
+
+                StockHistory::create([
+                    'product_id'  => $productId,
+                    'branch_id'   => $data['branch_id'],
+                    'business_id' => $data['business_id'],
+                    'user_id'     => $data['user_id'],
+                    'reference'   => $sale->reference . '-' . strtoupper(uniqid()),
+                    'type'        => 'sale',
+                    'action'      => 'remove',
+                    'quantity'    => $quantity,
+                    'notes'       => 'Sold via POS',
+                ]);
             }
 
             /*

@@ -12,8 +12,13 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthService
 {
-    public function __construct(protected AuthRepositoryInterface $repo)
-    {
+    public function __construct(
+        protected AuthRepositoryInterface $repo,
+        protected BankService $bankService,
+        protected PerformanceRatingService $performanceRatingService,
+        protected PayrollTaxBandService $payrollTaxBandService,
+        protected PayrollStatutoryRateService $payrollStatutoryRateService
+    ) {
     }
 
     /*
@@ -42,6 +47,10 @@ class AuthService
 
             $this->repo->createDefaultBranch($business->id, $user->id);
             $this->repo->startTrialSubscription($business->id);
+            $this->bankService->seedDefaults($business->id);
+            $this->performanceRatingService->seedDefaults($business->id);
+            $this->payrollTaxBandService->seedDefaults($business->id);
+            $this->payrollStatutoryRateService->seedDefaults($business->id);
         });
 
         return [
@@ -80,6 +89,10 @@ class AuthService
                 return ['code' => 401, 'data' => ['message' => 'Invalid credentials']];
             }
 
+            if (!$user->is_active) {
+                return ['code' => 403, 'data' => ['message' => 'This account has been deactivated. Contact your business admin for access.']];
+            }
+
             try {
                 $token = JWTAuth::fromUser($user);
             } catch (JWTException $e) {
@@ -104,6 +117,12 @@ class AuthService
             $user = JWTAuth::setToken($token)->toUser();
         } catch (JWTException $e) {
             return ['code' => 500, 'data' => ['message' => 'Could not create token']];
+        }
+
+        if (!$user->is_active) {
+            JWTAuth::setToken($token)->invalidate();
+
+            return ['code' => 403, 'data' => ['message' => 'This account has been deactivated. Contact your business admin for access.']];
         }
 
         Cache::forget($ipKey);
@@ -179,6 +198,13 @@ class AuthService
     {
         try {
             $user = JWTAuth::parseToken()->authenticate();
+
+            // Called on every app load/navigation, so a deactivated account
+            // (e.g. a completed termination) gets cut off on its next check
+            // rather than staying signed in until the token naturally expires.
+            if (!$user->is_active) {
+                return ['code' => 403, 'data' => ['valid' => false, 'message' => 'This account has been deactivated.']];
+            }
 
             return [
                 'code' => 200,

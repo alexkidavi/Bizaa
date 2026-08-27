@@ -816,7 +816,8 @@
                   v-model.number="adjustForm.quantity"
                   type="number"
                   min="0"
-                  placeholder="Enter quantity"
+                  step="0.01"
+                  placeholder="Enter quantity (decimals allowed, e.g. 10.2)"
                   class="w-full px-4 py-2.5 bg-[#F5FAFF] border border-[#D9EBF7] rounded-xl text-sm text-slate-700 outline-none focus:border-[#229DE7] transition"
                 />
               </div>

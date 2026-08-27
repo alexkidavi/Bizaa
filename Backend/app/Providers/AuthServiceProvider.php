@@ -22,13 +22,32 @@ use App\Models\Business;
 use App\Models\BusinessSubscription;
 use App\Models\Department;
 use App\Models\EcommerceStore;
+use App\Models\Award;
+use App\Models\AwardType;
+use App\Models\Bank;
+use App\Models\PerformanceCycle;
+use App\Models\PerformanceRating;
+use App\Models\PerformanceReview;
+use App\Models\EmployeeProfile;
 use App\Models\MpesaPayment;
+use App\Models\Resignation;
+use App\Models\Termination;
+use App\Models\TerminationType;
+use App\Models\Warning;
+use App\Models\WarningType;
 use App\Models\Shift;
 use App\Models\Attendance;
 use App\Models\Overtime;
 use App\Models\LeaveType;
 use App\Models\Leave;
-use App\Models\Payroll;
+use App\Models\LeaveBalance;
+use App\Models\PayrollSalaryComponent;
+use App\Models\PayrollTaxBand;
+use App\Models\PayrollStatutoryRate;
+use App\Models\PayrollSetting;
+use App\Models\PayrollPeriod;
+use App\Models\Payslip;
+use App\Models\SalaryAdvance;
 use App\Models\Role;
 use App\Models\Sale;
 use App\Models\StockTake;
@@ -50,13 +69,20 @@ use App\Policies\SupplierPolicy;
 use App\Policies\UnitPolicy;
 use App\Policies\ExpenseCategoryPolicy;
 use App\Policies\ExpensePolicy;
+use App\Policies\AwardPolicy;
+use App\Policies\BankPolicy;
 use App\Policies\DepartmentPolicy;
+use App\Policies\PerformanceReviewPolicy;
+use App\Policies\EmployeeProfilePolicy;
+use App\Policies\HrmLookupTypePolicy;
+use App\Policies\ResignationPolicy;
 use App\Policies\ShiftPolicy;
+use App\Policies\TerminationPolicy;
+use App\Policies\WarningPolicy;
 use App\Policies\AttendancePolicy;
 use App\Policies\OvertimePolicy;
 use App\Policies\LeaveTypePolicy;
 use App\Policies\LeavePolicy;
-use App\Policies\PayrollPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\SalePolicy;
 use App\Policies\StockTakePolicy;
@@ -74,12 +100,31 @@ class AuthServiceProvider extends ServiceProvider
         ExpenseCategory::class => ExpenseCategoryPolicy::class,
         Expense::class        => ExpensePolicy::class,
         Department::class     => DepartmentPolicy::class,
+        EmployeeProfile::class => EmployeeProfilePolicy::class,
+        Bank::class            => BankPolicy::class,
+        PerformanceCycle::class => HrmLookupTypePolicy::class,
+        PerformanceRating::class => HrmLookupTypePolicy::class,
+        PerformanceReview::class => PerformanceReviewPolicy::class,
+        AwardType::class       => HrmLookupTypePolicy::class,
+        WarningType::class     => HrmLookupTypePolicy::class,
+        TerminationType::class => HrmLookupTypePolicy::class,
+        Award::class           => AwardPolicy::class,
+        Warning::class         => WarningPolicy::class,
+        Resignation::class     => ResignationPolicy::class,
+        Termination::class     => TerminationPolicy::class,
         Shift::class          => ShiftPolicy::class,
         Attendance::class     => AttendancePolicy::class,
         Overtime::class       => OvertimePolicy::class,
         LeaveType::class      => LeaveTypePolicy::class,
         Leave::class          => LeavePolicy::class,
-        Payroll::class        => PayrollPolicy::class,
+        LeaveBalance::class   => HrmLookupTypePolicy::class,
+        PayrollSalaryComponent::class => HrmLookupTypePolicy::class,
+        PayrollTaxBand::class  => HrmLookupTypePolicy::class,
+        PayrollStatutoryRate::class => HrmLookupTypePolicy::class,
+        PayrollSetting::class  => HrmLookupTypePolicy::class,
+        PayrollPeriod::class   => HrmLookupTypePolicy::class,
+        Payslip::class         => HrmLookupTypePolicy::class,
+        SalaryAdvance::class   => HrmLookupTypePolicy::class,
         Role::class           => RolePolicy::class,
         Sale::class           => SalePolicy::class,
         StockTake::class      => StockTakePolicy::class,
