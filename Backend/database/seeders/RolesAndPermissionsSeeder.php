@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use App\Models\Business;
 use App\Models\Role;
 use App\Models\Permission;
 
@@ -137,17 +138,39 @@ class RolesAndPermissionsSeeder extends Seeder
 
         /*
         |--------------------------------------------------------------------------
-        | ROLES
+        | ROLES — demo/dev bootstrap only, never production
         |--------------------------------------------------------------------------
+        | This seeds a full sample role catalog (admin/manager/cashier/...)
+        | for ONE business, so local dev/tests have something realistic to
+        | log in as. It is NOT how real businesses get their roles — that
+        | happens at signup via AuthRepository::createAdminRoleWithAllPermissions()
+        | (which correctly sets business_id) and afterwards via the Roles UI.
+        | `roles.business_id` is a required FK (see
+        | 2026_05_06_174852_add_business_id_to_roles_table.php), so unlike
+        | the global Permission catalog above, these rows can't safely be
+        | created without a business to attach to — running this against
+        | production would either fail outright (no business row for a
+        | truly fresh install) or silently graft this demo catalog onto a
+        | real customer's business. Bail out in both cases: the permission
+        | catalog above still seeds fine on its own (that's the part that
+        | must run in production whenever a new permission is added).
         */
+        if (! app()->environment('local', 'testing')) {
+            return;
+        }
 
-        $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'api']);
-        $manager = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'api']);
-        $cashier = Role::firstOrCreate(['name' => 'cashier', 'guard_name' => 'api']);
-        $storeKeeper = Role::firstOrCreate(['name' => 'store_keeper', 'guard_name' => 'api']);
-        $accountant = Role::firstOrCreate(['name' => 'accountant', 'guard_name' => 'api']);
-        $hr = Role::firstOrCreate(['name' => 'hr', 'guard_name' => 'api']);
-        $rider = Role::firstOrCreate(['name' => 'rider', 'guard_name' => 'api']);
+        $business = Business::first();
+        if (! $business) {
+            return;
+        }
+
+        $admin = Role::firstOrCreate(['name' => 'admin', 'business_id' => $business->id, 'guard_name' => 'api']);
+        $manager = Role::firstOrCreate(['name' => 'manager', 'business_id' => $business->id, 'guard_name' => 'api']);
+        $cashier = Role::firstOrCreate(['name' => 'cashier', 'business_id' => $business->id, 'guard_name' => 'api']);
+        $storeKeeper = Role::firstOrCreate(['name' => 'store_keeper', 'business_id' => $business->id, 'guard_name' => 'api']);
+        $accountant = Role::firstOrCreate(['name' => 'accountant', 'business_id' => $business->id, 'guard_name' => 'api']);
+        $hr = Role::firstOrCreate(['name' => 'hr', 'business_id' => $business->id, 'guard_name' => 'api']);
+        $rider = Role::firstOrCreate(['name' => 'rider', 'business_id' => $business->id, 'guard_name' => 'api']);
 
         /*
         |--------------------------------------------------------------------------
