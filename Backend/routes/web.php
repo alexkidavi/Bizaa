@@ -2,9 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
+Route::fallback(function () {
     return response()->json([
-        'name' => 'Bizaa',
-        'status' => 'ok'
+        'path' => request()->path(),
+        'method' => request()->method(),
+        'route' => request()->route()?->uri(),
+        'route_name' => request()->route()?->getName(),
     ]);
 });
