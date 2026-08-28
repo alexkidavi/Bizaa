@@ -56,6 +56,7 @@ use App\Models\PayrollSetting;
 use App\Models\PayrollPeriod;
 use App\Models\Payslip;
 use App\Models\SalaryAdvance;
+use App\Models\LoyaltySetting;
 use App\Models\Role;
 use App\Models\Sale;
 use App\Models\StockTake;
@@ -134,6 +135,7 @@ class AuthServiceProvider extends ServiceProvider
         PayrollPeriod::class   => HrmLookupTypePolicy::class,
         Payslip::class         => HrmLookupTypePolicy::class,
         SalaryAdvance::class   => HrmLookupTypePolicy::class,
+        LoyaltySetting::class  => HrmLookupTypePolicy::class,
         Role::class           => RolePolicy::class,
         Sale::class           => SalePolicy::class,
         StockTake::class      => StockTakePolicy::class,

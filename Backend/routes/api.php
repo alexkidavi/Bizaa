@@ -18,6 +18,8 @@ use App\Http\Controllers\{
     StockController,
     UnitController,
     CustomerController,
+    LoyaltyController,
+    LoyaltySettingController,
     PurchaseController,
     SupplierController,
     InvoiceController,
@@ -87,6 +89,15 @@ use App\Models\Business;
 
 Route::get('/counties', [BusinessOptionsController::class, 'getCounties']);
 Route::get('/industries', [BusinessOptionsController::class, 'getIndustries']);
+
+// Public landing/pricing page — LandingPricing.vue and Privacy.vue call
+// this exact path (`/api/subscription-plans`, no auth) directly via a bare
+// axios instance, not the app's authenticated `api` client. The only
+// existing "subscription-plans" routes live under the auth:api-gated
+// `/subscription` prefix (wrong path anyway) and under `/superadmin` —
+// neither is reachable by a visitor who isn't logged in yet, which is
+// exactly who the public pricing section is for.
+Route::get('/subscription-plans', [SubscriptionController::class, 'allplans']);
 
 // Public marketplace (no auth required)
 Route::prefix('marketplace')->group(function () {
@@ -307,6 +318,31 @@ Route::prefix('sales')->middleware(['auth:api', 'subscription'])->group(function
 
     Route::delete('/{id}/delete', [SaleController::class, 'destroy'])
         ->middleware('permission:sales.delete');
+});
+
+/*
+|--------------------------------------------------------------------------
+| LOYALTY PROGRAM
+|--------------------------------------------------------------------------
+*/
+Route::prefix('loyalty')->middleware(['auth:api', 'subscription'])->group(function () {
+
+    Route::get('settings', [LoyaltySettingController::class, 'show'])
+        ->middleware('permission:loyalty.manage');
+    Route::put('settings', [LoyaltySettingController::class, 'update'])
+        ->middleware('permission:loyalty.manage');
+
+    Route::get('customers', [LoyaltyController::class, 'index'])
+        ->middleware('permission:loyalty.manage');
+    Route::get('customers/{id}/history', [LoyaltyController::class, 'history'])
+        ->middleware('permission:loyalty.manage');
+    Route::post('customers/{id}/adjust', [LoyaltyController::class, 'adjust'])
+        ->middleware('permission:loyalty.manage');
+
+    // Gated on sales.create (not loyalty.manage) — this is a checkout-time
+    // check any cashier needs, not a management action.
+    Route::post('preview-redeem', [LoyaltyController::class, 'previewRedeem'])
+        ->middleware('permission:sales.create');
 });
 
 /*

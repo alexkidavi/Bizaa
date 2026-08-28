@@ -9,6 +9,7 @@ use App\Models\SaleItem;
 use App\Models\SalePayment;
 use App\Models\StockHistory;
 use App\Repositories\Contracts\SaleRepositoryInterface;
+use App\Services\LoyaltyService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
@@ -18,7 +19,7 @@ class SaleRepository implements SaleRepositoryInterface
 {
     protected $model;
 
-    public function __construct(Product $product)
+    public function __construct(Product $product, protected LoyaltyService $loyalty)
     {
         $this->model = $product;
     }
@@ -108,6 +109,22 @@ class SaleRepository implements SaleRepositoryInterface
                 // SPLIT PAYMENTS
                 if (!empty($data['payments']) && is_array($data['payments'])) {
                     foreach ($data['payments'] as $payment) {
+                        // A "points" leg isn't a plain payment row — it has to
+                        // check and debit the customer's points balance first
+                        // (throwing, and rolling back the whole sale, if they
+                        // can't cover it), so it's routed through LoyaltyService
+                        // instead of a bare SalePayment::create().
+                        if (($payment['method'] ?? null) === 'points') {
+                            $this->loyalty->redeemForSale(
+                                $data['customer_id'] ?? null,
+                                (float) $payment['amount'],
+                                $sale->id,
+                                $data['business_id'],
+                                $data['user_id']
+                            );
+                            continue;
+                        }
+
                         SalePayment::create([
                             'user_id'     => $data['user_id'],
                             'business_id' => $data['business_id'],
@@ -120,6 +137,15 @@ class SaleRepository implements SaleRepositoryInterface
                             'note'        => $payment['note'] ?? null,
                         ]);
                     }
+                } elseif (($data['payment_method'] ?? null) === 'points') {
+                    // SINGLE PAYMENT, paid entirely with points.
+                    $this->loyalty->redeemForSale(
+                        $data['customer_id'] ?? null,
+                        (float) ($data['paid_amount'] ?? $data['total']),
+                        $sale->id,
+                        $data['business_id'],
+                        $data['user_id']
+                    );
                 } else {
                     // SINGLE PAYMENT — POS sends the M-Pesa receipt code as a
                     // top-level mpesa_code, not nested under payments[].
@@ -134,6 +160,13 @@ class SaleRepository implements SaleRepositoryInterface
                     ]);
                 }
             }
+
+            // Registered customers earn points on the sale total regardless
+            // of how it was paid (including a points-redeeming sale itself —
+            // matches "points per transaction amount" literally rather than
+            // trying to carve out the points-paid portion). No-op if
+            // loyalty is disabled or there's no customer on this sale.
+            $this->loyalty->earnForSale($sale);
 
             return $sale->load(['items', 'payments']);
         });

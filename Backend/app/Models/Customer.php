@@ -18,6 +18,11 @@ class Customer extends Model
         'phone',
         'status',
         'notes',
+        'loyalty_points_balance',
+    ];
+
+    protected $casts = [
+        'loyalty_points_balance' => 'integer',
     ];
 
     public function branches()
@@ -28,5 +33,10 @@ class Customer extends Model
     public function crmContact()
     {
         return $this->hasOne(CrmContact::class, 'customer_id');
+    }
+
+    public function loyaltyTransactions()
+    {
+        return $this->hasMany(LoyaltyPointTransaction::class);
     }
 }

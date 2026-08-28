@@ -119,6 +119,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'crm.contacts.view_all',
             'crm.activities.view_all',
 
+            // Loyalty program
+            'loyalty.manage',
+
             // Reports
             'reports.view',
 
