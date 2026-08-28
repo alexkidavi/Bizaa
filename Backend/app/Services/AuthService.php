@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Mail\WelcomeMail;
 use App\Models\User;
 use App\Repositories\Contracts\AuthRepositoryInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -34,7 +36,7 @@ class AuthService
         $data['phone'] = '254' . substr(preg_replace('/\D/', '', $data['phone']), -9);
         $data['business_phone'] = '254' . substr(preg_replace('/\D/', '', $data['business_phone']), -9);
 
-        DB::transaction(function () use ($data) {
+        [$business, $user] = DB::transaction(function () use ($data) {
             $business = $this->repo->createBusiness($data);
             $role = $this->repo->createAdminRoleWithAllPermissions($business->id);
 
@@ -55,7 +57,20 @@ class AuthService
             $this->payrollStatutoryRateService->seedDefaults($business->id);
             $this->crmSourceService->seedDefaults($business->id);
             $this->crmPipelineStageService->seedDefaults($business->id);
+
+            return [$business, $user];
         });
+
+        // Sent after the transaction commits, not from inside it — a queued
+        // mail job could otherwise be picked up by a worker before the new
+        // business/user rows are actually visible outside this connection.
+        // A failed send should never fail registration itself, so it's
+        // swallowed (and logged) rather than let bubble up.
+        try {
+            Mail::to($user->email)->queue(new WelcomeMail($user, $business->business_name));
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return [
             'code' => 201,
