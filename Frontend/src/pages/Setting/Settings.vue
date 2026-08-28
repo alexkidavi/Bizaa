@@ -50,6 +50,7 @@
         @saved="settings = $event"
       />
       <BanksTab v-else-if="activeTab === 'banks'" />
+      <LoyaltyTab v-else-if="activeTab === 'loyalty'" />
     </template>
   </div>
 </template>
@@ -65,12 +66,14 @@ import TaxTab from "./tabs/TaxTab.vue";
 import MpesaTab from "./tabs/MpesaTab.vue";
 import DigitaxTab from "./tabs/DigitaxTab.vue";
 import BanksTab from "./tabs/BanksTab.vue";
+import LoyaltyTab from "./tabs/LoyaltyTab.vue";
 
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
 
 const canManageBusiness = computed(() => auth.hasPermission("business.update"));
+const canManageLoyalty = computed(() => auth.hasPermission("loyalty.manage"));
 
 const allTabs = [
   { key: "profile", label: "Profile", requiresBusiness: false },
@@ -79,10 +82,15 @@ const allTabs = [
   { key: "mpesa", label: "M-Pesa Payments", requiresBusiness: true },
   { key: "digitax", label: "KRA eTIMS", requiresBusiness: true },
   { key: "banks", label: "Banks", requiresBusiness: true },
+  { key: "loyalty", label: "Loyalty", requiresBusiness: false, requiresPermission: "loyalty.manage" },
 ];
 
 const visibleTabs = computed(() =>
-  allTabs.filter((t) => !t.requiresBusiness || canManageBusiness.value)
+  allTabs.filter((t) => {
+    if (t.requiresBusiness && !canManageBusiness.value) return false;
+    if (t.requiresPermission === "loyalty.manage" && !canManageLoyalty.value) return false;
+    return true;
+  })
 );
 
 const activeTab = computed(() => {

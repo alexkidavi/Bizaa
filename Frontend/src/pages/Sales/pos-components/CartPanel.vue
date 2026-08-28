@@ -314,13 +314,43 @@
           </div>
         </div>
       </div>
+
+      <!-- Pay with Points -->
+      <div v-if="selectedPayment === 'points'" class="points-payment-box">
+        <div v-if="!selectedCustomer" class="points-warning">
+          Select a customer first — points can only be redeemed for a registered customer.
+        </div>
+        <div v-else-if="loadingPreview" class="points-loading">Checking points balance…</div>
+        <template v-else-if="pointsPreview">
+          <div v-if="!pointsPreview.enabled" class="points-warning">Loyalty points aren't enabled for this business.</div>
+          <div v-else-if="!pointsPreview.meets_minimum" class="points-warning">
+            {{ selectedCustomer.name }} has {{ pointsPreview.balance }} points, below the minimum of
+            {{ pointsPreview.min_redeem_points }} required to redeem.
+          </div>
+          <div v-else class="points-summary" :class="{ short: !pointsPreview.can_cover }">
+            <div class="points-row">
+              <span>{{ selectedCustomer.name }}'s balance</span>
+              <strong>{{ pointsPreview.balance }} pts (~KES {{ Number(pointsPreview.available_cash).toLocaleString() }})</strong>
+            </div>
+            <div class="points-row">
+              <span>Points needed for this sale</span>
+              <strong>{{ pointsPreview.points_required }} pts</strong>
+            </div>
+            <div class="points-verdict">
+              {{ pointsPreview.can_cover
+                ? '✓ Enough points to cover this sale in full.'
+                : '✗ Not enough points to cover this sale — choose another payment method.' }}
+            </div>
+          </div>
+        </template>
+      </div>
     </div>
 
     <!-- ── Charge + Quick Actions ── -->
     <div class="pos-charge-area">
       <button
         @click="handleCharge"
-        :disabled="cart.length === 0 || processing"
+        :disabled="cart.length === 0 || processing || pointsChargeBlocked"
         class="pos-charge-btn"
         :class="{ processing }"
       >
@@ -424,6 +454,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
 import MpesaModal from "./MpesaModal.vue";
+import LoyaltyService from "@/services/LoyaltyService";
 
 const props = defineProps({
   cart: { type: Array, default: () => [] },
@@ -470,13 +501,19 @@ const emit = defineEmits([
 const cartEl = ref(null);
 const showMpesaModal = ref(false);
 
-// Intercept charge — open M-Pesa modal if mpesa is selected, else emit normally
+// Intercept charge — open M-Pesa modal if mpesa is selected, block points
+// charging until there's a customer + a preview that says it's covered
+// (the backend re-validates and is the real authority, but this avoids a
+// pointless round-trip for an obviously-doomed charge), else emit normally.
 const handleCharge = () => {
   if (props.selectedPayment === "mpesa") {
     showMpesaModal.value = true;
-  } else {
-    emit("process-payment");
+    return;
   }
+  if (props.selectedPayment === "points") {
+    if (!props.selectedCustomer || !pointsPreview.value?.can_cover) return;
+  }
+  emit("process-payment");
 };
 
 // M-Pesa confirmed from modal — pass meta to parent then trigger payment
@@ -543,7 +580,48 @@ const paymentMethods = [
       template: `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>`,
     },
   },
+  {
+    value: "points",
+    label: "Points",
+    icon: {
+      template: `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>`,
+    },
+  },
 ];
+
+// "Pay with Points" needs a live check against the selected customer's
+// balance — fetched whenever this method is chosen (or the customer/total
+// changes while it's active) so the cashier sees "enough" or "not enough"
+// before hitting Charge, matching the same live-feedback pattern as the
+// cash-tendered change display.
+const pointsPreview = ref(null);
+const loadingPreview = ref(false);
+let previewDebounce = null;
+
+const fetchPointsPreview = () => {
+  clearTimeout(previewDebounce);
+  if (props.selectedPayment !== "points" || !props.selectedCustomer || !props.grandTotal) {
+    pointsPreview.value = null;
+    return;
+  }
+  previewDebounce = setTimeout(async () => {
+    loadingPreview.value = true;
+    try {
+      const res = await LoyaltyService.previewRedeem(props.selectedCustomer.id, props.grandTotal);
+      pointsPreview.value = res;
+    } catch {
+      pointsPreview.value = null;
+    } finally {
+      loadingPreview.value = false;
+    }
+  }, 300);
+};
+
+watch(() => [props.selectedPayment, props.selectedCustomer, props.grandTotal], fetchPointsPreview, { immediate: true });
+
+const pointsChargeBlocked = computed(() =>
+  props.selectedPayment === "points" && (!props.selectedCustomer || !pointsPreview.value?.can_cover)
+);
 
 const splitMethods = ref([
   { key: "cash", label: "Cash", amount: 0 },
@@ -1127,6 +1205,61 @@ const splitMethods = ref([
   font-size: 12px;
   font-weight: 700;
   outline: none;
+}
+
+/* Pay with Points */
+.points-payment-box {
+  font-size: 12px;
+}
+.points-warning {
+  padding: 10px 12px;
+  background: #fff7ed;
+  border: 1.5px solid #fed7aa;
+  border-radius: 10px;
+  color: #c2410c;
+  font-weight: 600;
+  font-size: 11.5px;
+}
+.points-loading {
+  padding: 10px 12px;
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 11.5px;
+}
+.points-summary {
+  padding: 10px 12px;
+  background: #ecfdf5;
+  border: 1.5px solid #a7f3d0;
+  border-radius: 10px;
+}
+.points-summary.short {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+.points-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  color: #475569;
+  padding: 2px 0;
+}
+.points-row strong {
+  color: #1e293b;
+  font-weight: 800;
+}
+.points-verdict {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 11px;
+  font-weight: 700;
+}
+.points-summary:not(.short) .points-verdict {
+  color: #059669;
+}
+.points-summary.short .points-verdict {
+  color: #dc2626;
 }
 
 /* Charge */

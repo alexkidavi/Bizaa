@@ -3,5 +3,8 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return response()->json(['name' => 'Bizaa API', 'status' => 'ok']);
+    return response()->json([
+        'name' => 'Bizaa',
+        'status' => 'ok'
+    ]);
 });

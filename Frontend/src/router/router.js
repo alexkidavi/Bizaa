@@ -483,6 +483,11 @@ const routes = [
         component: () => import("@/pages/CRM/Campaigns.vue"),
         meta: { permission: "crm.campaigns" }
       },
+      {
+        path: "loyalty",
+        component: () => import("@/pages/CRM/Loyalty.vue"),
+        meta: { permission: "loyalty.manage" }
+      },
     ],
   },
   {

@@ -9,6 +9,18 @@ use Illuminate\Http\Request;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__ . '/../routes/web.php',
+        // Laravel prefixes every routes/api.php route with this internally
+        // (default 'api' when unset). On a deployment where the web server
+        // already isolates the API under its own path (e.g. an Apache
+        // `Alias /api -> Backend/public`, which makes SCRIPT_NAME/pathInfo
+        // arrive at Laravel with `/api` already stripped), applying the
+        // prefix a second time here means no incoming request path ever
+        // matches — every api.php route silently 404s. Leave the default
+        // 'api' for a normal deployment (this app served from its own
+        // DocumentRoot, nothing stripping the prefix beforehand); set
+        // API_ROUTE_PREFIX="" in .env only on a host that aliases /api the
+        // way described above.
+        apiPrefix: env('API_ROUTE_PREFIX', 'api'),
         api: __DIR__ . '/../routes/api.php',
         commands: __DIR__ . '/../routes/console.php',
         health: '/up',

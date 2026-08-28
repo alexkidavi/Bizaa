@@ -529,7 +529,7 @@ const showHRM = () =>
     // "roles.manage",
   ]);
 
-const showCRM = () => canAny(["crm.contacts", "crm.companies", "crm.tags", "crm.sources", "crm.deals", "crm.pipeline_settings", "crm.activities", "crm.campaigns", "crm.dashboard"]);
+const showCRM = () => canAny(["crm.contacts", "crm.companies", "crm.tags", "crm.sources", "crm.deals", "crm.pipeline_settings", "crm.activities", "crm.campaigns", "crm.dashboard", "loyalty.manage"]);
 
 const showEcommerce = () => can("ecommerce.manage");
 
@@ -599,6 +599,7 @@ const crmMenu = [
   { label: "Tags", to: "/crm/tags", perm: "crm.tags" },
   { label: "Pipeline Stages", to: "/crm/pipeline-stages", perm: "crm.pipeline_settings" },
   { label: "Campaigns", to: "/crm/campaigns", perm: "crm.campaigns" },
+  { label: "Loyalty", to: "/crm/loyalty", perm: "loyalty.manage" },
 ];
 
 const ecommerceMenu = [
