@@ -141,6 +141,30 @@ class RolesAndPermissionsSeeder extends Seeder
 
         /*
         |--------------------------------------------------------------------------
+        | SYNC — every existing business's Admin role, always
+        |--------------------------------------------------------------------------
+        | AuthRepository::createAdminRoleWithAllPermissions() grants a new
+        | business's "Admin" role every permission that exists *at signup
+        | time*. Nothing re-runs that sync later — so a permission added to
+        | the catalog above after a business registered never reaches that
+        | business's Admin role on its own, and it silently can't access
+        | the new feature. This closes that gap: every time this seeder
+        | runs (which should happen on every deploy that adds a permission
+        | — no separate manual step), every business's Admin role gets
+        | topped up with whatever's new. syncWithoutDetaching() only adds
+        | — it never removes a permission, so it can't undo anything a
+        | business owner customized. Deliberately scoped to roles named
+        | exactly "Admin" (the auto-provisioned one) — a business's own
+        | custom Manager/Cashier/etc. roles are curated by them and must
+        | never be silently expanded.
+        */
+        $allPermissionIds = Permission::pluck('id');
+        Role::where('name', 'Admin')->get()->each(
+            fn (Role $admin) => $admin->permissions()->syncWithoutDetaching($allPermissionIds)
+        );
+
+        /*
+        |--------------------------------------------------------------------------
         | ROLES — demo/dev bootstrap only, never production
         |--------------------------------------------------------------------------
         | This seeds a full sample role catalog (admin/manager/cashier/...)
