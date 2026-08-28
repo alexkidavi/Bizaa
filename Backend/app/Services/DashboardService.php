@@ -23,6 +23,7 @@ public function getDashboardData(string $filter, int $businessId, ?int $branchId
         'today_summary'        => $this->repo->getTodaySummary($businessId, $branchId),
         'top_branches'         => $this->repo->getTopBranches($filter, $businessId),
         'outstanding_balance'  => $this->repo->getOverallOutstanding($businessId, $branchId),
+        'onboarding'           => $this->repo->getOnboardingStatus($businessId),
     ];
 }
 }

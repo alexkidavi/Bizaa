@@ -65,7 +65,7 @@ class AuthService
         // mail job could otherwise be picked up by a worker before the new
         // business/user rows are actually visible outside this connection.
         // A failed send should never fail registration itself, so it's
-        // swallowed (and logged) rather than let bubble up.
+        // swallowed (and reported) rather than let bubble up.
         try {
             Mail::to($user->email)->queue(new WelcomeMail($user, $business->business_name));
         } catch (\Throwable $e) {

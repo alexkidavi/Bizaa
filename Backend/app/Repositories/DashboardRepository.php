@@ -520,4 +520,30 @@ private function getPurchasePaymentStatus($purchases): string
             'revenue'     => (float) $b->revenue,
         ]);
     }
+
+    /**
+     * Five cheap existence checks, not counts — the checklist only needs
+     * "has at least one", so `exists()` short-circuits on the first row
+     * instead of scanning the whole table. `branches` starts pre-satisfied
+     * (AuthRepository::createDefaultBranch() runs at registration), so
+     * every business begins with 1 of 5 steps already done — the rest are
+     * genuinely undone until the owner acts on them.
+     */
+    public function getOnboardingStatus(int $businessId): array
+    {
+        $has_branch     = DB::table('branches')->where('business_id', $businessId)->exists();
+        $has_units      = DB::table('units')->where('business_id', $businessId)->exists();
+        $has_categories = DB::table('categories')->where('business_id', $businessId)->exists();
+        $has_products   = DB::table('products')->where('business_id', $businessId)->exists();
+        $has_sale       = DB::table('sales')->where('business_id', $businessId)->exists();
+
+        return [
+            'has_branch'     => $has_branch,
+            'has_units'      => $has_units,
+            'has_categories' => $has_categories,
+            'has_products'   => $has_products,
+            'has_sale'       => $has_sale,
+            'complete'       => $has_branch && $has_units && $has_categories && $has_products && $has_sale,
+        ];
+    }
 }
