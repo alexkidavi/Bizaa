@@ -11,11 +11,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-echo "==> composer install"
-composer install --no-dev --optimize-autoloader
+echo "==> composer update"
+composer update --no-dev --optimize-autoloader
 
 echo "==> database migrations"
-php artisan migrate --force
+php artisan migrate
 
 echo "==> permissions/roles sync (new Permission rows + re-sync onto every
      business's Admin role — see RolesAndPermissionsSeeder for what this
