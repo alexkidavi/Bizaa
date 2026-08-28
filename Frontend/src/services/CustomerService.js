@@ -9,6 +9,13 @@ export default {
     return axios.get(`${API_URL}/get`);
   },
 
+  // For the POS customer picker only — returns a small, plain-integer-id
+  // result set (capped server-side, searched server-side), not the whole
+  // customer table. Never use getAll() for a picker/search UI.
+  searchForPos(search = "") {
+    return axios.get(`${API_URL}/pos-search`, { params: { search } });
+  },
+
   create(data) {
     return axios.post(`${API_URL}/register`, data);
   },

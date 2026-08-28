@@ -16,7 +16,12 @@ class CrmActivityController extends Controller
         $businessId = Auth::user()->business_id;
 
         return [
-            'contact_id' => ($requireContact ? 'required_without:deal_id' : 'nullable') . "|integer|exists:crm_contacts,id,business_id,{$businessId}",
+            // "nullable" has to be present alongside required_without — without
+            // it, a request that sends contact_id: null (which the deal-context
+            // activity form does, since it only has a deal_id) still fails the
+            // integer/exists checks even though required_without correctly
+            // decided the field isn't required here.
+            'contact_id' => 'nullable|' . ($requireContact ? 'required_without:deal_id|' : '') . "integer|exists:crm_contacts,id,business_id,{$businessId}",
             'deal_id' => "nullable|integer|exists:crm_deals,id,business_id,{$businessId}",
             'type' => 'required|in:call,meeting,email,whatsapp,sms,note,task',
             'subject' => 'required|string|max:200',

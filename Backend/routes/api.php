@@ -422,6 +422,11 @@ Route::prefix('customers')->middleware(['auth:api', 'subscription'])->group(func
     Route::get('/get', [CustomerController::class, 'index'])
         ->middleware('permission:customers.manage');
 
+    // Must stay ahead of the /{id} wildcard below — "pos-search" would
+    // otherwise be captured as an {id} value.
+    Route::get('/pos-search', [CustomerController::class, 'posSearch'])
+        ->middleware('permission:customers.manage');
+
     Route::post('/register', [CustomerController::class, 'store'])
         ->middleware('permission:customers.manage');
 

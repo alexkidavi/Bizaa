@@ -128,7 +128,6 @@
       :show-held="showHeldOrders"
       :show-receipt="showReceipt"
       :selected-customer="selectedCustomer"
-      :customers="customers"
       :held-orders="heldOrders"
       :receipt-data="receiptData"
       :time-remaining="timeRemaining"
@@ -150,7 +149,6 @@ import { useRouter } from "vue-router";
 import Swal from "sweetalert2";
 import SalesService from "@/services/SaleService";
 import ProductService from "@/services/ProductService";
-import CustomerService from "@/services/CustomerService";
 import CategoryService from "@/services/categoryService";
 import BranchesService from "@/services/Branchesservice";
 
@@ -632,7 +630,6 @@ const printQuote = () => window.print();
 
 /* ── CUSTOMERS ───────────────────────── */
 const showCustomerModal = ref(false);
-const customers = ref([]);
 const selectCustomer = (c) => {
   selectedCustomer.value = c;
   showCustomerModal.value = false;
@@ -655,18 +652,18 @@ onMounted(async () => {
   clockTimer = setInterval(updateClock, 1000);
   window.addEventListener("keydown", handleKeyboard);
   try {
-    const [branchRes, catRes, custRes] = await Promise.all([
+    // Customers are no longer preloaded here — PosModals now searches
+    // them server-side, on demand, so this doesn't fetch the whole
+    // customer table on every POS page load (see CustomerService.searchForPos()).
+    const [branchRes, catRes] = await Promise.all([
       BranchesService.getAllBranches(),
       CategoryService.getAll(),
-      CustomerService.getAll().catch(() => ({ data: [] })),
     ]);
     const rawBranches = branchRes.data ?? branchRes;
     branches.value = Array.isArray(rawBranches) ? rawBranches : rawBranches?.data ?? [];
     if (branches.value.length > 0) activeBranch.value = branches.value[0].id;
     const rawCats = catRes.data?.data || catRes.data || catRes;
     categories.value = Array.isArray(rawCats) ? rawCats : [];
-    const rawCust = custRes.data?.data || custRes.data || custRes;
-    customers.value = Array.isArray(rawCust) ? rawCust : [];
   } catch {
     /* silently continue */
   }

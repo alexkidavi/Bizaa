@@ -18,6 +18,11 @@ class CustomerService
         return $this->repo->all();
     }
 
+    public function searchForPos(?string $search)
+    {
+        return $this->repo->searchForPos($search);
+    }
+
 
 
     public function createCustomer($data)

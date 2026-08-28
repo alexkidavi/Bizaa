@@ -26,6 +26,13 @@ class CustomerController extends Controller
         return response()->json($this->service->getAllCustomers());
     }
 
+    public function posSearch(Request $request)
+    {
+        $this->authorize('viewAny', Customer::class);
+        $search = $request->query('search');
+        return response()->json(['data' => $this->service->searchForPos($search)]);
+    }
+
     public function store(CustomerRequest $request)
     {
         $this->authorize('create', Customer::class);

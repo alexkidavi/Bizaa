@@ -21,9 +21,9 @@
             <input
               v-model="customerSearch"
               type="text"
-              placeholder="Search customers…"
+              placeholder="Search customers by name or phone…"
               class="pos-modal-input pl-10"
-              @input="filterCustomers"
+              @input="onCustomerSearchInput"
             />
           </div>
         </div>
@@ -39,6 +39,16 @@
               <div class="text-xs text-slate-400">No account required</div>
             </div>
           </button>
+
+          <div v-if="!customerSearch" class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            Recent
+          </div>
+          <div v-if="customersLoading" class="px-4 py-6 text-center text-xs text-slate-400">
+            Searching…
+          </div>
+          <div v-else-if="customerSearch && filteredCustomers.length === 0" class="px-4 py-6 text-center text-xs text-slate-400">
+            No customers match "{{ customerSearch }}"
+          </div>
           <button
             v-for="c in filteredCustomers"
             :key="c.id"
@@ -243,6 +253,7 @@
 import { ref, watch, computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { printReceipt, resolveBusiness } from "@/utils/printReceipt";
+import CustomerService from "@/services/CustomerService";
 
 const auth = useAuthStore();
 const business = computed(() => resolveBusiness(auth.user));
@@ -252,7 +263,6 @@ const props = defineProps({
   showHeld: Boolean,
   showReceipt: Boolean,
   selectedCustomer: { type: Object, default: null },
-  customers: { type: Array, default: () => [] },
   heldOrders: { type: Array, default: () => [] },
   receiptData: { type: Object, default: null },
   timeRemaining: { type: Function, default: () => "" },
@@ -271,6 +281,7 @@ const emit = defineEmits([
 
 const customerSearch = ref("");
 const filteredCustomers = ref([]);
+const customersLoading = ref(false);
 const receiptEl = ref(null);
 
 // ── PRINT ─────────────────────────────────────────────────────────────────
@@ -320,30 +331,39 @@ const doPrintReceipt = () => {
 
 defineExpose({ printReceipt: doPrintReceipt });
 
-// Sync customers list when it loads / modal opens
-watch(
-  () => props.customers,
-  (val) => {
-    filteredCustomers.value = val;
-  },
-  { immediate: true }
-);
+// Server-side search, not a client-side filter over a preloaded list —
+// with a large customer base, loading everyone up front (and re-filtering
+// that whole array on every keystroke) is exactly the kind of thing that
+// works fine in a demo and falls over once there's real data volume.
+// CustomerService.searchForPos() caps results server-side and only
+// returns a "recent" set when there's no search term, never "everyone".
+const runCustomerSearch = async () => {
+  customersLoading.value = true;
+  try {
+    const res = await CustomerService.searchForPos(customerSearch.value.trim());
+    filteredCustomers.value = res?.data?.data ?? [];
+  } catch {
+    filteredCustomers.value = [];
+  } finally {
+    customersLoading.value = false;
+  }
+};
+
+let customerSearchDebounce = null;
+const onCustomerSearchInput = () => {
+  clearTimeout(customerSearchDebounce);
+  customerSearchDebounce = setTimeout(runCustomerSearch, 300);
+};
+
 watch(
   () => props.showCustomer,
   (v) => {
     if (v) {
       customerSearch.value = "";
-      filteredCustomers.value = props.customers;
+      runCustomerSearch();
     }
   }
 );
-
-const filterCustomers = () => {
-  const q = customerSearch.value.toLowerCase();
-  filteredCustomers.value = props.customers.filter(
-    (c) => c.name?.toLowerCase().includes(q) || c.phone?.includes(q)
-  );
-};
 
 const lineTotal = (item) =>
   Math.round(item.selling_price * item.qty * (1 - (item.discount || 0) / 100));
