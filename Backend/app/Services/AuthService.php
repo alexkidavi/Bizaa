@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use App\Mail\WelcomeMail;
+use App\Jobs\SendWelcomeMailJob;
 use App\Models\User;
 use App\Repositories\Contracts\AuthRepositoryInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -61,15 +61,20 @@ class AuthService
             return [$business, $user];
         });
 
-        // Sent after the transaction commits, not from inside it — a queued
-        // mail job could otherwise be picked up by a worker before the new
-        // business/user rows are actually visible outside this connection.
-        // A failed send should never fail registration itself, so it's
-        // swallowed (and reported) rather than let bubble up.
+        // Dispatched after the transaction commits, not from inside it — a
+        // queued job could otherwise be picked up by a worker before the
+        // new business/user rows are actually visible outside this
+        // connection. A failed dispatch should never fail registration
+        // itself, so it's caught (and logged) rather than let bubble up.
+        // See SendWelcomeMailJob for the actual send + its own logging —
+        // "dispatched" here only means "handed to the jobs table", not
+        // "email delivered"; check the job's own log lines (or whether a
+        // queue worker is even running) if a user reports never receiving it.
         try {
-            Mail::to($user->email)->queue(new WelcomeMail($user, $business->business_name));
+            SendWelcomeMailJob::dispatch($user, $business->business_name);
+            Log::info('WelcomeMail: job dispatched', ['user_id' => $user->id, 'email' => $user->email]);
         } catch (\Throwable $e) {
-            report($e);
+            Log::error('WelcomeMail: dispatch failed', ['user_id' => $user->id, 'email' => $user->email, 'error' => $e->getMessage()]);
         }
 
         return [

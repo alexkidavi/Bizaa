@@ -156,69 +156,66 @@
     </div>
 
     <!-- ══════════ ONBOARDING CHECKLIST (first-time setup) ══════════ -->
-    <transition name="fade">
-      <div
-        v-if="!loading && showOnboarding"
-        class="bg-white border border-[#D9EBF7] rounded-2xl shadow-sm overflow-hidden mb-6"
-      >
-        <div class="h-[3px] bg-gradient-to-r from-[#229DE7] via-[#5BB8F5] to-[#229DE7]"></div>
-        <div class="p-6 md:p-8">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-            <div>
-              <h3 class="font-extrabold text-lg text-slate-900">Let's get {{ user?.name ? "your shop" : "" }} set up 🚀</h3>
-              <p class="text-slate-400 text-sm mt-0.5">Finish these steps to start selling with Bizaa.</p>
-            </div>
-            <div class="flex items-center gap-3">
-              <div class="w-28 h-2 bg-[#EEF5FB] rounded-full overflow-hidden">
-                <div
-                  class="h-full bg-[#229DE7] rounded-full transition-all"
-                  :style="{ width: (onboardingCompletedCount / onboardingSteps.length) * 100 + '%' }"
-                ></div>
-              </div>
-              <span class="text-xs font-bold text-slate-500 whitespace-nowrap">{{ onboardingCompletedCount }} of {{ onboardingSteps.length }}</span>
-            </div>
+    <div
+      v-if="!loading && showOnboarding"
+      class="bg-white border border-[#D9EBF7] rounded-2xl mb-6"
+    >
+      <div class="p-6 md:p-8">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+          <div>
+            <h3 class="font-extrabold text-lg text-slate-900">Finish setting up your shop</h3>
+            <p class="text-slate-400 text-sm mt-0.5">Complete these steps to start selling with Bizaa.</p>
           </div>
-
-          <div class="space-y-2.5">
-            <div
-              v-for="(step, i) in onboardingSteps"
-              :key="step.key"
-              class="flex items-center gap-4 p-3.5 rounded-xl border transition-all"
-              :class="step.done ? 'bg-emerald-50/50 border-emerald-100' : 'bg-[#F5FAFF] border-[#D9EBF7]'"
-            >
+          <div class="flex items-center gap-3">
+            <div class="w-28 h-2 bg-[#EEF5FB] rounded-full overflow-hidden">
               <div
-                class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm"
-                :class="step.done ? 'bg-emerald-500 text-white' : 'bg-white border-2 border-[#B3DEFA] text-[#229DE7]'"
-              >
-                <svg v-if="step.done" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <span v-else>{{ i + 1 }}</span>
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="font-bold text-sm" :class="step.done ? 'text-emerald-700 line-through decoration-emerald-300' : 'text-slate-900'">
-                  {{ step.label }}
-                </p>
-                <p class="text-xs text-slate-400 mt-0.5">{{ step.desc }}</p>
-              </div>
-              <span
-                v-if="step.done"
-                class="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-600 bg-emerald-100 cursor-default select-none"
-              >
-                ✓ Done
-              </span>
-              <router-link
-                v-else
-                :to="step.to"
-                class="flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-[#229DE7] hover:bg-[#1682C4] shadow-sm transition-all"
-              >
-                Start →
-              </router-link>
+                class="h-full bg-[#229DE7] rounded-full"
+                :style="{ width: (onboardingCompletedCount / onboardingSteps.length) * 100 + '%' }"
+              ></div>
             </div>
+            <span class="text-xs font-bold text-slate-500 whitespace-nowrap">{{ onboardingCompletedCount }} of {{ onboardingSteps.length }}</span>
+          </div>
+        </div>
+
+        <div class="space-y-2.5">
+          <div
+            v-for="(step, i) in onboardingSteps"
+            :key="step.key"
+            class="flex items-center gap-4 p-3.5 rounded-xl border"
+            :class="step.done ? 'bg-emerald-50 border-emerald-100' : 'bg-[#F5FAFF] border-[#D9EBF7]'"
+          >
+            <div
+              class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm"
+              :class="step.done ? 'bg-emerald-500 text-white' : 'bg-white border-2 border-[#B3DEFA] text-[#229DE7]'"
+            >
+              <svg v-if="step.done" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span v-else>{{ i + 1 }}</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="font-bold text-sm" :class="step.done ? 'text-emerald-700' : 'text-slate-900'">
+                {{ step.label }}
+              </p>
+              <p class="text-xs text-slate-400 mt-0.5">{{ step.desc }}</p>
+            </div>
+            <span
+              v-if="step.done"
+              class="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-600 bg-emerald-100 cursor-default select-none"
+            >
+              Done
+            </span>
+            <router-link
+              v-else
+              :to="step.to"
+              class="flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-[#229DE7] hover:bg-[#1682C4]"
+            >
+              Start
+            </router-link>
           </div>
         </div>
       </div>
-    </transition>
+    </div>
 
     <!-- ══════════ NO DATA STATE ══════════ -->
     <transition name="fade">
