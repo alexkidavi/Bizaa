@@ -28,6 +28,16 @@ export default {
   revokeSubscription:(id)           => api.post(`/subscriptions/${id}/revoke`).then(r => r.data),
   extendSubscription:(id, days)     => api.post(`/subscriptions/${id}/extend`, { days }).then(r => r.data),
 
+  // Subscription PLAN catalog management (create/edit/deactivate/reorder) —
+  // the same rows the landing page pricing section and the in-portal
+  // Subscription page both read live from.
+  listPlanCatalog:  ()              => api.get("/plans").then(r => r.data),
+  createPlan:       (data)          => api.post("/plans", data).then(r => r.data),
+  updatePlan:       (id, data)      => api.put(`/plans/${id}`, data).then(r => r.data),
+  deletePlan:       (id)            => api.delete(`/plans/${id}`).then(r => r.data),
+  togglePlanActive: (id)            => api.post(`/plans/${id}/toggle`).then(r => r.data),
+  reorderPlans:     (ids)           => api.put("/plans/reorder", { ids }).then(r => r.data),
+
   // Stores
   getStores:        (params = {})   => api.get("/stores", { params }).then(r => r.data),
   toggleFeatured:   (id)            => api.post(`/stores/${id}/toggle-featured`).then(r => r.data),
@@ -35,4 +45,8 @@ export default {
 
   // Reports
   getReports:       ()              => api.get("/reports/overview").then(r => r.data),
+
+  // Platform settings (logo, contact info, socials shown on the public landing page)
+  getSettings:      ()              => api.get("/settings").then(r => r.data),
+  updateSettings:   (formData)      => api.post("/settings", formData, { headers: { "Content-Type": "multipart/form-data" } }).then(r => r.data),
 };

@@ -148,7 +148,7 @@
         </ul>
         <div class="app-btns">
           <a
-            href="https://play.google.com/store"
+            href="https://play.google.com/store/apps/details?id=ke.co.bizaa"
             style="color: white"
             target="_blank"
             rel="noopener"

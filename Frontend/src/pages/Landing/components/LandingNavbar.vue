@@ -3,13 +3,14 @@
     <div class="container navbar__inner">
       <a class="navbar__logo" @click.prevent="scrollTo('top')">
         <img
-          src="/logo.webp"
-          width="100"
-          height="90"
-          alt="Bizaa"
+          src="/bizaa-logo.png"
+          width="132"
+          height="53"
+          alt="Bizaa POS"
           class="navbar__logo-img"
         />
       </a>
+
 
       <nav class="navbar__links">
         <a @click.prevent="scrollTo('features')">Features</a>

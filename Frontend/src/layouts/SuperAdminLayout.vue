@@ -33,6 +33,11 @@
           <span v-if="!sidebarCollapsed">Subscriptions</span>
         </router-link>
 
+        <router-link to="/superadmin/plans" class="sa-nav-item" active-class="sa-nav-item--active">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span v-if="!sidebarCollapsed">Plans</span>
+        </router-link>
+
         <router-link to="/superadmin/stores" class="sa-nav-item" active-class="sa-nav-item--active">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
           <span v-if="!sidebarCollapsed">Stores</span>
@@ -41,6 +46,11 @@
         <router-link to="/superadmin/reports" class="sa-nav-item" active-class="sa-nav-item--active">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           <span v-if="!sidebarCollapsed">Reports</span>
+        </router-link>
+
+        <router-link to="/superadmin/settings" class="sa-nav-item" active-class="sa-nav-item--active">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span v-if="!sidebarCollapsed">Settings</span>
         </router-link>
       </nav>
 
@@ -96,8 +106,10 @@ const pageTitles = {
   SuperAdminBusinesses:   "Businesses",
   SuperAdminBusinessView: "Business Details",
   SuperAdminSubscriptions:"Subscriptions",
+  SuperAdminPlans:        "Subscription Plans",
   SuperAdminStores:       "Stores",
   SuperAdminReports:      "Reports",
+  SuperAdminSettings:     "Settings",
 };
 
 const pageTitle = computed(() => pageTitles[route.name] ?? "Super Admin");

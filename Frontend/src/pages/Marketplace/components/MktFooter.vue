@@ -4,12 +4,12 @@
       <div class="mkt-footer__grid">
         <div>
           <div class="mkt-footer__logo">
-            <img src="/logo.webp" alt="Bizaa" />
-            Bizaa Market
+            <img src="/bizaa-logo.png" alt="Bizaa POS" />
+            Market
           </div>
           <p class="mkt-footer__brand p">East Africa's growing marketplace connecting local businesses with customers across the region.</p>
           <div class="mkt-footer__app">
-            <a href="https://play.google.com/store" target="_blank" rel="noopener" class="mkt-footer__app-btn">
+            <a href="https://play.google.com/store/apps/details?id=ke.co.bizaa" target="_blank" rel="noopener" class="mkt-footer__app-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76a2 2 0 0 0 2.05-.22l11.59-6.69-2.66-2.65L3.18 23.76zM20.8 10.38 17.46 8.5l-3 2.97 3 2.97 3.37-1.92a1.83 1.83 0 0 0 0-3.14zM2.01 1.24A1.8 1.8 0 0 0 1.5 2.5v19a1.8 1.8 0 0 0 .51 1.26l.07.07 10.64-10.64v-.25L2.08 1.17l-.07.07zM5.23.46l11.59 6.69-2.66 2.65L3.18.24A2 2 0 0 1 5.23.46z"/></svg>
               Google Play
             </a>

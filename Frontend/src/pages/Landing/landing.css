@@ -1,3 +1,17 @@
+/* ── Brand palette ────────────────────────────────────── */
+/* Matches the Bizaa POS logo: blue for the primary brand/actions, amber
+   for secondary emphasis — same split as "Bizaa" (blue) + "POS" (amber)
+   in the wordmark itself. Blue was already the established color
+   throughout the app; amber is new, used deliberately (section labels,
+   emphasized headline words, the "most popular" plan badge) rather than
+   scattered everywhere, so it reads as an accent, not a second primary. */
+:root {
+  --bizaa-blue: #229de7;
+  --bizaa-blue-dark: #1682c4;
+  --bizaa-orange: #f5a623;
+  --bizaa-orange-dark: #d98c0f;
+}
+
 /* ── Base ─────────────────────────────────────────────── */
 .landing *,
 .landing *::before,
@@ -19,9 +33,9 @@
   cursor: pointer;
 }
 .container {
-  max-width: 1120px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 32px;
 }
 
 /* ── Buttons ─────────────────────────────────────────── */
@@ -48,7 +62,13 @@
   padding: 7px 14px;
   font-size: 13px;
 }
-.btn--primary {
+/* Specificity note: `.landing a { color: inherit }` is a class+element
+   selector (0,1,1), which beats a single-class `.btn--xxx { color: ... }`
+   rule (0,1,0) — so on an <a>/<router-link> button these color modifiers
+   were silently losing to the inherited ancestor color. Every usage in
+   this file always pairs `.btn` with a modifier class, so `.btn.btn--xxx`
+   (0,2,0) is used here to reliably win regardless of element type. */
+.btn.btn--primary {
   background: #229de7;
   color: #fff;
   border-color: #229de7;
@@ -57,7 +77,7 @@
   background: #1682c4;
   border-color: #1682c4;
 }
-.btn--outline {
+.btn.btn--outline {
   border-color: #d1d5db;
   color: #374151;
   background: #fff;
@@ -66,7 +86,7 @@
   border-color: #9ca3af;
   color: #111827;
 }
-.btn--ghost {
+.btn.btn--ghost {
   color: #6b7280;
   border-color: transparent;
 }
@@ -74,7 +94,7 @@
   color: #111827;
   background: #f9fafb;
 }
-.btn--text {
+.btn.btn--text {
   color: #374151;
   border: none;
   padding-left: 0;
@@ -83,7 +103,7 @@
 .btn--text:hover {
   color: #111827;
 }
-.btn--white {
+.btn.btn--white {
   background: #fff;
   color: #111827;
   border-color: #fff;
@@ -91,7 +111,7 @@
 .btn--white:hover {
   background: #f3f4f6;
 }
-.btn--outline-white {
+.btn.btn--outline-white {
   border-color: rgba(255, 255, 255, 0.4);
   color: #fff;
 }
@@ -129,7 +149,7 @@
   font-weight: 700;
   letter-spacing: 0.8px;
   text-transform: uppercase;
-  color: #229de7;
+  color: var(--bizaa-orange-dark);
 }
 
 /* ── NAVBAR ──────────────────────────────────────────── */
@@ -246,7 +266,7 @@
 
 /* ── HERO ────────────────────────────────────────────── */
 .hero {
-  padding: 120px 0 80px;
+  padding: 120px 0 40px;
   background: #fff;
 }
 .hero__inner {
@@ -287,7 +307,7 @@
 }
 .hero__text h1 em {
   font-style: normal;
-  color: #229de7;
+  color: var(--bizaa-orange);
 }
 .hero__text p {
   font-size: 17px;
@@ -380,38 +400,62 @@
   display: block;
 }
 
-/* ── LOGO BAR ────────────────────────────────────────── */
-.logobar {
+/* ── STAT BAR ────────────────────────────────────────── */
+.statbar {
   border-top: 1px solid #e5e7eb;
   border-bottom: 1px solid #e5e7eb;
-  padding: 20px 0;
+  padding: 18px 0;
   background: #f9fafb;
 }
-.logobar__inner {
+.statbar__inner {
   display: flex;
   align-items: center;
-  gap: 24px;
+  justify-content: space-between;
+  gap: 20px;
   flex-wrap: wrap;
 }
-.logobar__inner > span {
-  font-size: 13px;
-  color: #9ca3af;
+.statbar__stats {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.statbar__stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   white-space: nowrap;
 }
-.logobar__cities {
+.statbar__num {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--bizaa-blue);
+  letter-spacing: -0.3px;
+}
+.statbar__label {
+  font-size: 12.5px;
+  color: #6b7280;
+}
+.statbar__divider {
+  width: 1px;
+  height: 16px;
+  background: #e5e7eb;
+}
+.statbar__cities {
   display: flex;
   gap: 0;
   flex-wrap: wrap;
 }
-.logobar__cities span {
-  font-size: 14px;
+.statbar__cities span {
+  font-size: 13px;
   font-weight: 600;
   color: #374151;
-  padding: 0 16px;
+  padding: 0 14px;
   border-right: 1px solid #e5e7eb;
 }
-.logobar__cities span:last-child {
+.statbar__cities span:last-child {
   border-right: none;
+  padding-right: 0;
 }
 
 /* ── FEATURES ────────────────────────────────────────── */
@@ -479,7 +523,7 @@
 }
 .app__copy h2 em {
   font-style: normal;
-  color: #229de7;
+  color: var(--bizaa-orange);
 }
 .app__copy > p {
   font-size: 15px;
@@ -1040,14 +1084,14 @@
   position: relative;
 }
 .plan--featured {
-  border-color: #229de7;
+  border-color: var(--bizaa-blue);
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.06);
 }
 .plan__badge {
   position: absolute;
   top: -12px;
   left: 24px;
-  background: #229de7;
+  background: var(--bizaa-orange);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -1169,33 +1213,47 @@
 .testi-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  gap: 20px;
 }
 .testi {
-  border: 1.5px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 24px;
+  position: relative;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 28px 26px 26px;
   background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.testi:hover {
+  transform: translateY(-4px);
+  border-color: #dbeafe;
+  box-shadow: 0 16px 32px -12px rgba(17, 24, 39, 0.12);
+}
+.testi__quote {
+  color: #eaf5fd;
+  margin-bottom: 4px;
 }
 .testi__stars {
   display: flex;
   gap: 2px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 .testi p {
-  font-size: 14px;
+  font-size: 14.5px;
   color: #374151;
   line-height: 1.7;
-  margin-bottom: 18px;
+  margin-bottom: 22px;
 }
 .testi__author {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
+  padding-top: 18px;
+  border-top: 1px solid #f3f4f6;
 }
 .testi__av {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1204,6 +1262,7 @@
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 4px #e5e7eb;
 }
 .testi__author strong {
   display: block;
@@ -1403,7 +1462,7 @@
     display: flex;
   }
   .hero {
-    padding: 96px 0 60px;
+    padding: 96px 0 32px;
   }
   .hero__inner {
     grid-template-columns: 1fr;
@@ -1429,10 +1488,13 @@
     flex-direction: column;
     align-items: flex-start;
   }
-  .logobar__inner {
+  .statbar__inner {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+  }
+  .statbar__stats {
+    gap: 14px;
   }
   .footer__top {
     grid-template-columns: 1fr 1fr;

@@ -3,7 +3,7 @@
     <div class="mkt-container mkt-nav__top">
       <!-- Logo - pushed to far left -->
       <router-link to="/marketplace" class="mkt-nav__logo">
-        <img src="/logo.webp" alt="Bizaa" class="mkt-nav__logo-img" />
+        <img src="/bizaa-logo.png" alt="Bizaa POS" class="mkt-nav__logo-img" />
         <!-- Bizaa<span class="mkt-nav__logo-dot">Market</span> -->
       </router-link>
 
