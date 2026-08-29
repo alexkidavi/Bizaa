@@ -130,7 +130,7 @@
 <script setup>
 import { ref, reactive, onMounted } from "vue";
 import Swal from "sweetalert2";
-import superAdminService from "@/services/superAdminService";
+import superAdminService from "@/services/SuperAdminService";
 
 const plans   = ref([]);
 const loading = ref(true);

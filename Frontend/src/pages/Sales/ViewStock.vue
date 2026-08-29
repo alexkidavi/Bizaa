@@ -459,7 +459,7 @@
 import { ref, computed, watch, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import Swal from "sweetalert2";
-import StockTakeService from "@/services/StockService";
+import StockTakeService from "@/services/stockService";
 
 const router = useRouter();
 const route = useRoute();
