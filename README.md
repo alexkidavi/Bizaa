@@ -84,25 +84,123 @@ php artisan key:generate
 php artisan jwt:secret
 ```
 
-Configure `.env`: database connection, `QUEUE_CONNECTION=database`, and (optional) M-Pesa / DigiTax credentials per business — those are stored per-tenant in the `businesses` table via Settings, not in `.env`.
-
 ```bash
 php artisan migrate --seed
 php artisan serve
 php artisan queue:work   # required for report exports, campaign sends, and welcome emails
 ```
 
-In production, `php artisan queue:work` runs under Supervisor rather than as a foreground process — see [`Backend/deploy/QUEUE_WORKER.md`](Backend/deploy/QUEUE_WORKER.md) for the config, and [`Backend/deploy/deploy.sh`](Backend/deploy/deploy.sh) for the full idempotent deploy sequence (composer, migrate, reseed roles/permissions, cache, `queue:restart`).
-
 ### Frontend
 
 ```bash
 cd Frontend
 npm install
+cp .env.example .env   # then set VITE_APP_URL — see Environment configuration below
 npm run dev
 ```
 
-Set `VITE_APP_URL` in `Frontend/.env` to the backend URL (e.g. `http://127.0.0.1:8000`) before starting the dev server.
+See **Environment configuration** below for what each variable actually does, and **Deployment** for taking this to a production server.
+
+---
+
+## Environment configuration
+
+### Backend (`Backend/.env`)
+
+Copied from `Backend/.env.example`. Everything below is read via Laravel's `env()`/`config()`, never hardcoded.
+
+**Core Laravel**
+
+| Variable | Purpose |
+|---|---|
+| `APP_NAME`, `APP_ENV`, `APP_DEBUG`, `APP_URL` | Standard Laravel app identity. `APP_DEBUG=false` and a real `APP_URL` in production. |
+| `APP_KEY` | `php artisan key:generate` sets this — required, app won't boot without it. |
+| `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | MySQL in every real deployment; `.env.example` defaults to `sqlite` purely so a fresh checkout can boot with zero setup. |
+| `SESSION_DRIVER`, `CACHE_STORE`, `QUEUE_CONNECTION` | All default to `database` — no Redis/Memcached required to run this app. `QUEUE_CONNECTION=database` is load-bearing: see **Queued fan-out jobs** in Architecture notes, and `Backend/deploy/QUEUE_WORKER.md` for what silently breaks without a running worker. |
+| `MAIL_MAILER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | Set a real mailer (not `log`) for the welcome email to actually deliver. |
+
+**Routing (production-only gotcha)**
+
+| Variable | Purpose |
+|---|---|
+| `API_ROUTE_PREFIX` | Leave unset (defaults to `api`) on a normal deployment. Set to `API_ROUTE_PREFIX=""` **only** if the web server already strips `/api` before it reaches Laravel (e.g. an Apache `Alias /api -> Backend/public` on a shared vhost) — otherwise every `routes/api.php` route silently 404s because the prefix gets applied twice. See the comment in `bootstrap/app.php` for the full story; this exact bug took down the whole API once. |
+
+**Payments — M-Pesa (Safaricom Daraja)**
+
+| Variable | Purpose |
+|---|---|
+| `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_AUTH_URL` | OAuth credentials for the Daraja API. |
+| `MPESA_SHORTCODE`, `MPESA_PASSKEY`, `MPESA_STK_URL`, `MPESA_CALLBACK_URL`, `MPESA_CALLBACK_SECRET` | STK Push (used for subscription payments and sale payment confirmation). |
+| `MPESA_B2C_URL`, `MPESA_INITIATOR_NAME`, `MPESA_SECURITY_CREDENTIAL`, `MPESA_RESULT_URL`, `MPESA_TIMEOUT_URL` | B2C (business-to-customer) disbursements. |
+| `MPESA_TRANSACTION_STATUS_URL`, `MPESA_CONFIRMATION_URL` | Optional — transaction status query / confirmation. |
+
+**Tax compliance — DigiTax (KRA eTIMS)**
+
+| Variable | Purpose |
+|---|---|
+| `DIGITAX_BASE_URL` | Defaults to DigiTax's production API — override only for a sandbox. |
+| `DIGITAX_CALLBACK_URL`, `DIGITAX_CALLBACK_SECRET` | The eTIMS webhook URL and its auth token (appended to the callback path, since DigiTax doesn't support HMAC signing — see `config/services.php`). |
+
+Per-business M-Pesa till/DigiTax credentials (if a business uses its own, rather than the platform's) are stored in the `businesses` table via in-app Settings, **not** in `.env` — `.env` only holds the platform-level defaults.
+
+**CRM campaigns — messaging providers**
+
+| Variable | Purpose |
+|---|---|
+| `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_API_VERSION` | Meta WhatsApp Business Cloud API. Unset = campaigns log-only dry-run instead of sending, so the pipeline works before a WhatsApp Business Account exists. |
+| `SMS_PROVIDER`, `SMS_API_KEY`, `SMS_SENDER_ID` | No vendor is wired in yet — `SmsProviderInterface` resolves to a log-only stub until `SMS_PROVIDER` is set and a real implementation is bound for it. |
+
+**Optional**
+
+| Variable | Purpose |
+|---|---|
+| `POSTMARK_TOKEN`, `RESEND_KEY`, `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_DEFAULT_REGION` | Alternate mail drivers, if not using SMTP. |
+| `SLACK_BOT_USER_OAUTH_TOKEN`, `SLACK_BOT_USER_DEFAULT_CHANNEL` | Slack notifications, if enabled. |
+
+### Frontend (`Frontend/.env`)
+
+| Variable | Purpose |
+|---|---|
+| `VITE_APP_URL` | The backend's base URL (e.g. `http://127.0.0.1:8000` locally, `https://api.yourdomain.com` in production). Every `src/services/*.js` file builds its Axios base URL from this — nothing is hardcoded. |
+
+---
+
+## Deployment
+
+Production shape: Apache/Nginx serving the Laravel `Backend/public` as the API, a static build of `Frontend/dist` served separately (own vhost or same host, different path/subdomain), MySQL, and a Supervisor-managed queue worker. There's no Docker/CI pipeline in this repo yet — deploys are a `git pull` + script on the server.
+
+### Backend
+
+```bash
+cd /path/to/Backend
+bash deploy/deploy.sh
+```
+
+[`deploy/deploy.sh`](Backend/deploy/deploy.sh) is idempotent — safe to run after every deploy regardless of what actually changed:
+1. `composer update --no-dev --optimize-autoloader`
+2. `php artisan migrate`
+3. `php artisan db:seed --class=RolesAndPermissionsSeeder --force` — adds any new permissions and syncs them onto every existing business's Admin role, so tenants get new features without a manual step
+4. `php artisan optimize:clear` then `config:cache` + `route:cache`
+5. Restart `php-fpm` (drops stale opcache)
+6. `php artisan queue:restart` (workers reload their code)
+
+First deploy to a new server, before the script above will work:
+- Web server document root → `Backend/public`
+- `.env` configured (see **Environment configuration**) — if the web server strips `/api` before Laravel sees it (e.g. an `Alias /api`), set `API_ROUTE_PREFIX=""`
+- `php artisan storage:link`
+- Queue worker under Supervisor — see [`Backend/deploy/QUEUE_WORKER.md`](Backend/deploy/QUEUE_WORKER.md) and [`Backend/deploy/supervisor-bizaa-worker.conf`](Backend/deploy/supervisor-bizaa-worker.conf). Without this, campaign sends and report exports get stuck in `pending`/`sending` forever — nothing crashes, they just never finish.
+
+### Frontend
+
+```bash
+cd /path/to/Frontend
+npm install
+npm run build
+```
+
+Serve the resulting `dist/` as static files. Set `VITE_APP_URL` in `Frontend/.env` to the **production** backend URL before building — it's baked into the build output at build time, not read at runtime.
+
+**Case-sensitive imports**: this repo is developed on Windows/macOS (case-insensitive filesystems) but deploys to Linux (case-sensitive). An import whose casing doesn't match the real filename builds fine locally and fails on the server with `Could not load .../SomeFile: ENOENT`. If a build fails only on the server, check import casing first.
 
 ---
 
@@ -115,7 +213,7 @@ Set `VITE_APP_URL` in `Frontend/.env` to the backend URL (e.g. `http://127.0.0.1
 - **Row-level ACL**: `app/Services/Concerns/ScopesOwnRecords.php` is a shared trait (currently used by the CRM services) that restricts a list/find query to `assigned_to = user.id` unless the user holds the module's `*.view_all` permission — which `User::hasPermission()` always grants to the `admin` role. New modules that need "see only what's assigned to me" should reuse this trait rather than re-implementing the check.
 - **Queued fan-out jobs**: bulk operations (CRM campaign sends, report exports) use `Bus::batch()` — one job per unit of work, a `->finally()` callback that settles the parent record's status once every job in the batch has run, and a per-item ledger table so a single failure is visible and retryable without blocking or hiding the rest of the batch.
 - **Frontend service layer**: each backend resource has a matching `src/services/*Service.js` wrapping the shared Axios instance (`src/services/api.js`), which centralizes the base URL, auth header, and 401/402 session handling.
-- **Case-sensitive imports**: this repo deploys to a Linux server; local development on Windows/macOS won't catch an import whose casing doesn't match the actual filename (e.g. `@/services/superAdminService` vs. the real `SuperAdminService.js`) because those filesystems are case-insensitive. It'll build locally and fail on the server. Match casing exactly.
+- **Case-sensitive imports**: match filename casing exactly — see **Deployment** above for why this builds fine locally and fails on the server.
 
 ---
 
