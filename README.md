@@ -11,6 +11,36 @@ The system is split into two applications that share one API contract:
 
 ---
 
+## System architecture overview
+
+```
+┌─────────────────────┐        HTTPS / JSON         ┌──────────────────────────┐
+│  Frontend (Vue 3)    │ ───────────────────────────▶│  Backend (Laravel 12)    │
+│  SPA, Vite build     │◀─────────────────────────── │  routes/api.php only —   │
+│  Pinia + Vue Router  │        JWT bearer token      │  no server-rendered      │
+└─────────────────────┘                              │  views except PDF/email  │
+                                                       │  templates               │
+                                                       └───────────┬──────────────┘
+                                                                   │
+                                        ┌──────────────────────────┼──────────────────────────┐
+                                        ▼                          ▼                          ▼
+                                ┌───────────────┐        ┌──────────────────┐       ┌──────────────────┐
+                                │  MySQL         │        │  `jobs` table     │       │  External APIs    │
+                                │  (row-level    │        │  (QUEUE_CONNECTION│       │  M-Pesa, DigiTax, │
+                                │  multi-tenant  │        │  =database) →     │       │  WhatsApp Cloud   │
+                                │  via business_id)│      │  queue:work /     │       │  API              │
+                                └───────────────┘        │  Supervisor       │       └──────────────────┘
+                                                          └──────────────────┘
+```
+
+- **Frontend and backend are fully decoupled** — the Vue app is a static build talking to the Laravel app purely over its JSON API (`Frontend/src/services/api.js`); there's no shared session state, no server-rendered Blade views in the authenticated app (Blade is used only for PDF/Excel export templates and outgoing emails).
+- **Single database, row-level multi-tenancy** — one MySQL instance for every business on the platform; isolation is `business_id` scoping enforced in the repository layer, not separate schemas/databases per tenant (see Database structure and Architecture notes → Tenancy).
+- **Two request paths**: synchronous (most reads/writes, including the M-Pesa STK initiation and the DigiTax sale submission — both are plain outbound HTTP calls made inline) and queued (CRM campaign sends, report exports, the welcome email) — see API reference and Integration details below for which is which.
+- **Two authentication realms**: normal tenant users (JWT `auth:api`, scoped to their `business_id` + role permissions) and platform super-admins (`is_superadmin` flag, separate `superadmin` middleware, `/superadmin/*` routes) — see Architecture notes.
+- **Two client applications share the one API**: the authenticated SPA (`Frontend/src/pages`, everything behind login) and the public marketing/marketplace surface (landing page, `/marketplace`, Privacy page) — the latter calls a handful of intentionally unauthenticated routes (see API reference: routes marked *public*).
+
+---
+
 ## Core features
 
 **Sales & POS**
@@ -165,6 +195,96 @@ Per-business M-Pesa till/DigiTax credentials (if a business uses its own, rather
 
 ---
 
+## Database structure
+
+MySQL, 97 tables. This is a grouped overview, not a full DDL dump — the authoritative schema is always `Backend/database/migrations/` (one file per change, applied in order); read those for exact columns/types/indexes on any given table.
+
+| Group | Tables | Notes |
+|---|---|---|
+| **Auth & platform** | `users`, `roles`, `permissions`, `permission_role`, `sessions`, `password_reset_tokens`, `platform_settings`, `businesses`, `subscription_plans`, `business_subscriptions`, `mpesa_stks`, `mpesa_payments` | `businesses` is the tenant root — almost every other table below carries a `business_id` FK to it. `permission_role` is the roles↔permissions pivot; a user's permissions come from their `role_id`, not a direct grant. |
+| **Queue/cache infra** | `jobs`, `job_batches`, `failed_jobs`, `cache`, `cache_locks`, `migrations` | Laravel-managed, not application data — see **Operations & maintenance**. |
+| **Reference/lookup** | `counties`, `industries`, `banks`, `units`, `categories`, `brands`, `category_branch`, `brand_branch`, `unit_branch` | The `*_branch` pivots scope a lookup (unit/category/brand) to specific branches rather than the whole business. |
+| **Branches** | `branches`, `branch_customer`, `branch_supplier`, `product_branch`, `purchase_branch` | `product_branch` is where per-branch **stock level** actually lives — stock is never a single number on `products`. |
+| **Sales & POS** | `sales`, `sale_items`, `sale_payments`, `customers`, `quotations`, `quotation_items`, `invoices`, `invoice_items`, `invoice_payments` | `sales`/`quotations`/`invoices` each follow the parent + line-items + payments-ledger shape (see Architecture notes → Money ledgers). |
+| **Purchasing & inventory** | `purchases`, `purchase_items`, `purchase_payments`, `suppliers`, `products`, `stock_histories`, `stock_takes`, `stock_take_items` | `stock_histories` is the audit trail for every stock movement (sale, purchase, transfer, adjustment, stock-take correction). |
+| **Expenses** | `expenses`, `expense_categories`, `expense_payments` | Same parent + payments-ledger shape as Sales/Purchases. |
+| **Loyalty** | `loyalty_settings`, `loyalty_point_transactions` | One `loyalty_settings` row per business (points rate, enabled flag); `loyalty_point_transactions` is the earn/redeem ledger. |
+| **CRM** | `crm_contacts`, `crm_companies`, `crm_deals`, `crm_pipeline_stages`, `crm_activities`, `crm_tags`, `crm_contact_tag`, `crm_sources`, `crm_campaigns`, `crm_campaign_recipients` | `crm_contacts` is independent of `customers` until a contact converts. `crm_campaign_recipients` is the per-recipient send ledger for bulk SMS/WhatsApp/Email. |
+| **HRM — people & time** | `departments`, `shifts`, `employee_profiles`, `attendances`, `overtimes`, `leave_types`, `leaves`, `leave_balances`, `leave_balance_adjustments` | |
+| **HRM — payroll** | `payroll_periods`, `payslips`, `payslip_lines`, `payroll_settings`, `payroll_salary_components`, `payroll_statutory_rates`, `payroll_tax_bands`, `salary_advances`, `salary_advance_repayments` | |
+| **HRM — performance & conduct** | `performance_cycles`, `performance_ratings`, `performance_reviews`, `awards`, `award_types`, `warnings`, `warning_types`, `resignations`, `terminations`, `termination_types`, `hrm_audit_logs` | |
+| **Tax compliance** | `digitax_item_classes`, `digitax_unit_codes` | KRA eTIMS reference data (item classification codes, unit-of-measure codes) that DigiTax submissions must use. |
+| **Marketplace** | `ecommerce_stores` | One storefront per business that opts into `/marketplace`; products/orders reuse the Sales & Inventory tables above rather than a parallel schema. |
+| **Reports** | `report_exports` | One row per queued export job — status (`pending`/`processing`/`completed`/`failed`), file path, requested-by — polled by the frontend until it flips to `completed`. |
+
+**Conventions that hold across almost every business table:**
+- `business_id` — tenant scope, indexed, enforced in the repository layer (see Architecture notes → Tenancy)
+- `created_at`/`updated_at` on everything; a handful of HRM/CRM tables also carry `deleted_at` (soft deletes) — check the migration before assuming either way
+- Money columns are `decimal(10,2)` and Eloquent-cast as `decimal:2`, which **serializes as a string** — cast to `(float)` before arithmetic (a recurring gotcha in this codebase)
+
+---
+
+## API reference
+
+375 routes total, all under `Backend/routes/api.php`. This is a grouped index, not a full request/response reference — controller method names match the action (`index`/`show`/`store`/`update`/`destroy` plus a few verbs like `suspend`/`toggle`/`extend`), so `php artisan route:list --path=api` is the fastest way to see an exact method+path+middleware for any one endpoint.
+
+**Auth pattern**: every route below sits behind `auth:api` (JWT) unless marked *public*. Most business routes additionally require `subscription` (an active plan) and a `permission:<name>` middleware — see `RolesAndPermissionsSeeder` for the permission catalog. Super-admin routes (`/superadmin/*`) require the separate `superadmin` middleware, gated on `users.is_superadmin` (never mass-assignable — see Architecture notes).
+
+| Prefix | Routes | Controller(s) | What it covers |
+|---|---|---|---|
+| `/auth` | 9 | `LoginController`, `RegisterController` | Login, register, password reset, change password |
+| `/counties`, `/industries` | 2 | `BusinessOptionsController` | *Public.* Reference data for the registration form |
+| `/subscription-plans` | 1 | `SubscriptionController` | *Public.* Live plan catalog for the landing page pricing section |
+| `/platform-settings` | 1 | `PlatformSettingController` | *Public.* Branding/contact info for the landing page |
+| `/business` | 6 | `BusinessController` | The logged-in user's own business record + settings |
+| `/branches` | 6 | `BranchController` | Branch CRUD |
+| `/customers`, `/suppliers` | 8, 7 | `CustomerController`, `SupplierController` | Contact CRUD, `/customers/pos-search` (paginated, for POS at scale) |
+| `/products`, `/categories`, `/brands`, `/units` | 8, 4, 4, 4 | `ProductController` + lookups | Catalog CRUD, product search |
+| `/stocks` | 10 | `StockController` | Stock take, adjustment, branch-to-branch transfer, stock history |
+| `/sales` | 6 | `SaleController`, `DigitaxController` | POS sale creation, sale-level payments, eTIMS submission |
+| `/purchases` | 8 | `PurchaseController` | Purchase orders + payments |
+| `/quotations`, `/invoices` | 5, 5 | `QuotationController`, `InvoiceController` | Quote → sale conversion, invoicing |
+| `/expenses`, `/expense-categories` | 7, 4 | `ExpenseController` + lookup | Expense CRUD + payment ledger |
+| `/loyalty` | 6 | `LoyaltyController`, `LoyaltySettingController` | Points balance/history, per-business settings |
+| `/crm/contacts`, `/companies` | 6, 5 | `CrmContactController`, `CrmCompanyController` | Contact/company CRUD, convert-to-customer |
+| `/crm/deals`, `/pipeline-stages` | 10, 4 | `CrmDealController`, `CrmPipelineStageController` | Kanban pipeline, win/loss |
+| `/crm/activities` | 7 | `CrmActivityController` | Timeline entries + tasks ("My Tasks" = activities with a due date) |
+| `/crm/campaigns` | 7 | `CrmCampaignController` | Bulk SMS/WhatsApp/Email send + delivery status |
+| `/crm/tags`, `/sources`, `/dashboard` | 4, 4, 1 | `CrmTagController`, `CrmSourceController`, `CrmDashboardController` | Segmentation + pipeline/funnel/leaderboard stats |
+| `/hrm/employees`, `/departments`, `/shifts` | 9, 5, 5 | HRM controllers | Staff records, org structure, shift assignment |
+| `/hrm/attendance`, `/overtimes`, `/leaves`, `/leave-*` | 5, 5, 7, 9 | HRM controllers | Time tracking, leave requests/balances |
+| `/hrm/payroll-*`, `/payslips` | 24, 2 | Payroll controllers | Salary components, statutory rates, tax bands, periods, payslip generation |
+| `/hrm/performance-*` | 13 | Performance controllers | Review cycles, ratings, reviews |
+| `/hrm/awards`, `/warnings`, `/resignations`, `/terminations` + `*-types` | 22 | HRM controllers | Conduct/exit records + their configurable type lookups |
+| `/reports` | 19 | `ReportController`, `ReportExportController` | On-screen report data + queued Excel/PDF export |
+| `/subscription` | 6 | `SubscriptionController` | Current plan, billing history, M-Pesa STK subscribe flow |
+| `/mpesa` | 6 | `MpesaController` | STK push status checks, callback (*public*, signature-checked) |
+| `/digitax` | 4 | `DigitaxController` | eTIMS item classes/unit codes, callback (*public*, token-in-path) |
+| `/ecommerce` | 8 | `EcommerceStoreController` | Store setup for businesses selling on `/marketplace` |
+| `/marketplace/*` | 3 | `MarketplaceController` | *Public.* Storefront browsing (no auth) |
+| `/roles`, `/permissions`, `/staff` | 6, 1, 5 | `RoleController`, `PermissionController`, `StaffController` | Role/permission management, staff-user accounts |
+| `/superadmin/businesses`, `/subscriptions`, `/plans` | 4, 4, 6 | `SuperAdmin\*` | Tenant management, subscription grants, plan catalog CRUD |
+| `/superadmin/stores`, `/reports`, `/settings`, `/dashboard` | 3, 1, 2, 1 | `SuperAdmin\*` | Marketplace moderation, platform reports, branding, overview |
+
+---
+
+## Integration details
+
+**M-Pesa (Safaricom Daraja)** — `app/Services/MpesaService.php`
+- **STK Push**: the frontend calls an authenticated endpoint (sale payment, or `/subscription/initiate-stk`), which requests a push to the customer's phone and returns a `checkout_request_id` immediately. The frontend polls `GET /mpesa/check-status` until Safaricom's async result lands on the public `POST /mpesa/callback` route, which resolves the matching `mpesa_stks` row and, for a subscription, calls `activateSubscription()` — reads `SubscriptionPlan::find($planId)` fresh from the DB and computes `ends_at = starts_at + duration_days`, so editing a plan's price/duration in the super-admin **Plans** page changes what a subscriber is actually charged and for how long, with no code change needed.
+- **B2C**: outbound disbursements use `MPESA_INITIATOR_NAME` + `MPESA_SECURITY_CREDENTIAL` and post results to `MPESA_RESULT_URL`/`MPESA_TIMEOUT_URL`.
+
+**DigiTax (KRA eTIMS)** — `app/Services/DigitaxService.php`
+- A sale is submitted to DigiTax synchronously at creation time and returns an `offline_url` immediately — this is what the printed/emailed receipt's QR code shows at first. The KRA-verified `etims_url` arrives later, asynchronously, via the public `POST /digitax/callback/{token}` route (the `{token}` path segment is `DIGITAX_CALLBACK_SECRET`, since DigiTax doesn't support HMAC request signing) and upgrades the receipt once it lands. A sale is never blocked waiting on KRA.
+
+**Meta WhatsApp Business Cloud API** — CRM campaigns
+- Bound behind `WhatsAppProviderInterface`. With `WHATSAPP_PHONE_NUMBER_ID`/`WHATSAPP_ACCESS_TOKEN` unset, campaign sends run as a log-only dry run — the whole batch/ledger/status pipeline works and is testable before a real WhatsApp Business Account exists.
+
+**SMS** — CRM campaigns
+- No vendor is integrated yet. `SmsProviderInterface` resolves to a log-only stub (`SMS_PROVIDER` unset). Wiring in a real vendor (Africa's Talking, Twilio, etc.) means adding one implementation class and binding it in a service provider — no changes to `CrmCampaignService` or the job/ledger pipeline.
+
+---
+
 ## Deployment
 
 Production shape: Apache/Nginx serving the Laravel `Backend/public` as the API, a static build of `Frontend/dist` served separately (own vhost or same host, different path/subdomain), MySQL, and a Supervisor-managed queue worker. There's no Docker/CI pipeline in this repo yet — deploys are a `git pull` + script on the server.
@@ -201,6 +321,68 @@ npm run build
 Serve the resulting `dist/` as static files. Set `VITE_APP_URL` in `Frontend/.env` to the **production** backend URL before building — it's baked into the build output at build time, not read at runtime.
 
 **Case-sensitive imports**: this repo is developed on Windows/macOS (case-insensitive filesystems) but deploys to Linux (case-sensitive). An import whose casing doesn't match the real filename builds fine locally and fails on the server with `Could not load .../SomeFile: ENOENT`. If a build fails only on the server, check import casing first.
+
+---
+
+## Operations & maintenance
+
+**Logs**
+- Backend: `Backend/storage/logs/laravel.log` (`LOG_CHANNEL=stack` → single file by default). `info()`/`report()` calls throughout the service layer (e.g. M-Pesa/DigiTax failures, subscription activation) land here — this is the first place to check when a webhook-driven feature "did nothing."
+- Frontend: no server-side log — errors surface in the browser console; API errors are visible in the Network tab against the failing `VITE_APP_URL` request.
+- Web server: Apache/Nginx access + error logs at their usual OS paths, outside this repo.
+
+**Queue health**
+- `SELECT COUNT(*) FROM jobs` — a growing number means the worker isn't running or can't keep up.
+- `php artisan queue:failed` — list jobs that exhausted retries; `php artisan queue:retry all` to requeue them, `php artisan queue:retry {id}` for one.
+- `php artisan queue:monitor database:default --max=100` — check the worker is actually draining the queue.
+- After any deploy, `php artisan queue:restart` (already in `deploy.sh`) — Supervisor keeps the *process* alive, but a running worker keeps executing whatever code it loaded at start, so a deploy without this restart silently runs stale job code.
+
+**Database backups**
+- No backup automation ships in this repo — set up scheduled `mysqldump` (or your host's managed-MySQL backup feature) independently of anything here. Given the money-ledger and stock-history tables, prioritize point-in-time recovery capability (binlog-based) over daily-dump-only if the host supports it.
+- Restoring: standard `mysql < backup.sql`, then `php artisan migrate` to apply anything newer than the backup, then `php artisan queue:restart` + cache clear.
+
+**Updating dependencies**
+- Backend: `composer update` (matches what `deploy.sh` already runs) — check `composer.json`'s `require` block above for what's pinned; Laravel major-version bumps need their own upgrade-guide pass, not a routine update.
+- Frontend: `npm outdated` to see what's behind, `npm update` for in-range bumps. Vite/Tailwind are both on major-version-4/7 lines that move fast — read the changelog before jumping a major version, not just `npm install <pkg>@latest`.
+
+**Known operational gotchas** (all covered in more detail elsewhere in this doc — indexed here for quick lookup)
+- `API_ROUTE_PREFIX` misconfiguration → every `/api/*` route 404s (see Environment configuration)
+- Case-sensitive import paths → build succeeds locally, fails on the Linux server (see Deployment)
+- Missing/stopped queue worker → campaign sends and report exports silently stick at `pending`/`sending` forever (see above)
+- `decimal:2`-cast money fields serialize as strings → must `(float)` cast before arithmetic (see Database structure)
+
+---
+
+## Third-party dependencies
+
+**Backend** (`Backend/composer.json`)
+
+| Package | Purpose |
+|---|---|
+| `laravel/framework` ^12.0 | The framework itself |
+| `tymon/jwt-auth` ^2.2 | JWT authentication (`auth:api` guard) |
+| `barryvdh/laravel-dompdf` ^3.1 | PDF report/invoice/receipt generation |
+| `maatwebsite/excel` ^3.1 | Excel report exports |
+| `laravel/tinker` ^2.10 | REPL, used constantly for verification during development |
+
+No SMS or payment-gateway SDK is a composer dependency — M-Pesa and DigiTax are both plain HTTP calls via Laravel's `Http` facade against `config/services.php`-configured endpoints, not vendor packages.
+
+**Frontend** (`Frontend/package.json`)
+
+| Package | Purpose |
+|---|---|
+| `vue` ^3.5 | Framework (`<script setup>` throughout) |
+| `vite` ^7.1 / `@vitejs/plugin-vue` | Build tool |
+| `@tailwindcss/vite`, `tailwindcss` ^4.1 | Styling |
+| `pinia` ^3.0 | State management (`src/stores`) |
+| `vue-router` ^4.6 | Routing |
+| `axios` ^1.12 | HTTP client — every `src/services/*.js` wraps this |
+| `chart.js` / `vue-chartjs` | Dashboard and report charts |
+| `sweetalert2` | Confirm dialogs / toasts across super-admin and app pages |
+| `@heroicons/vue`, `lucide-vue-next` | Icon sets |
+| `qrcode` | Receipt QR codes (eTIMS `offline_url`/`etims_url`) |
+| `crypto-js` | Client-side handling of encrypted opaque IDs (see Core features → Customers) |
+| `vue-multiselect`, `vue-toast-notification` | Form/UI components |
 
 ---
 
