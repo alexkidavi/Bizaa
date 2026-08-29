@@ -19,6 +19,7 @@ use App\Http\Controllers\{
     UnitController,
     CustomerController,
     LoyaltyController,
+    PlatformSettingController,
     LoyaltySettingController,
     PurchaseController,
     SupplierController,
@@ -76,8 +77,10 @@ use App\Http\Controllers\{
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboard;
 use App\Http\Controllers\SuperAdmin\BusinessController as SuperAdminBusiness;
 use App\Http\Controllers\SuperAdmin\SubscriptionController as SuperAdminSubscription;
+use App\Http\Controllers\SuperAdmin\SubscriptionPlanController as SuperAdminSubscriptionPlan;
 use App\Http\Controllers\SuperAdmin\StoreController as SuperAdminStore;
 use App\Http\Controllers\SuperAdmin\ReportController as SuperAdminReport;
+use App\Http\Controllers\SuperAdmin\PlatformSettingController as SuperAdminPlatformSetting;
 
 use App\Models\Business;
 
@@ -98,6 +101,11 @@ Route::get('/industries', [BusinessOptionsController::class, 'getIndustries']);
 // neither is reachable by a visitor who isn't logged in yet, which is
 // exactly who the public pricing section is for.
 Route::get('/subscription-plans', [SubscriptionController::class, 'allplans']);
+
+// Platform branding/contact info (logo, support email/phone, socials) —
+// public so the landing page and Privacy page can read it without a
+// deploy every time it changes. Write side lives under /superadmin.
+Route::get('/platform-settings', [PlatformSettingController::class, 'show']);
 
 // Public marketplace (no auth required)
 Route::prefix('marketplace')->group(function () {
@@ -872,6 +880,20 @@ Route::prefix('superadmin')->middleware(['auth:api', 'superadmin'])->group(funct
     Route::post('/subscriptions/{id}/revoke', [SuperAdminSubscription::class, 'revoke']);
     Route::post('/subscriptions/{id}/extend', [SuperAdminSubscription::class, 'extend']);
 
+    // Subscription PLAN management (create/edit/deactivate/reorder the
+    // catalog itself) — distinct from `/subscription-plans` above, which
+    // stays a read-only active-only list for the "grant a plan" dropdown.
+    // Both the public landing page pricing section (`/api/subscription-plans`)
+    // and the in-portal Subscription page (`/api/subscription/plans`) already
+    // read live from the same `subscription_plans` table, so editing here
+    // is immediately reflected in both places, no deploy required.
+    Route::get('/plans',                    [SuperAdminSubscriptionPlan::class, 'index']);
+    Route::post('/plans',                   [SuperAdminSubscriptionPlan::class, 'store']);
+    Route::put('/plans/reorder',            [SuperAdminSubscriptionPlan::class, 'reorder']);
+    Route::put('/plans/{plan}',             [SuperAdminSubscriptionPlan::class, 'update']);
+    Route::delete('/plans/{plan}',          [SuperAdminSubscriptionPlan::class, 'destroy']);
+    Route::post('/plans/{plan}/toggle',     [SuperAdminSubscriptionPlan::class, 'toggleActive']);
+
     // Store management
     Route::get('/stores',                        [SuperAdminStore::class, 'index']);
     Route::post('/stores/{id}/toggle-featured',  [SuperAdminStore::class, 'toggleFeatured']);
@@ -879,6 +901,12 @@ Route::prefix('superadmin')->middleware(['auth:api', 'superadmin'])->group(funct
 
     // Reports
     Route::get('/reports/overview', [SuperAdminReport::class, 'overview']);
+
+    // Platform settings (branding + contact info shown on the public
+    // landing page / emails) — read/write here; public read is the
+    // unauthenticated /platform-settings route above.
+    Route::get('/settings', [SuperAdminPlatformSetting::class, 'show']);
+    Route::post('/settings', [SuperAdminPlatformSetting::class, 'update']);
 });
 
 /*
