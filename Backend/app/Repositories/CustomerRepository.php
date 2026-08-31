@@ -15,6 +15,16 @@ public function all()
 {
     $user = Auth::user();
 
+    // `id` is the plain integer — required by the Customers list page's own
+    // edit/update-status/delete calls (CustomerController::updateCustomer /
+    // updateStatus / destroy all take a plain id, never decrypt it). Was
+    // missing entirely until this fix: only the encrypted `customer_id`
+    // was returned, so every edit/delete call from this list was silently
+    // targeting `undefined`/id 0. `customer_id` (encrypted) is kept
+    // alongside it for the customer-facing links (getSales/getPayments)
+    // that deliberately want an opaque id, not a guessable sequential one.
+    // `status`/`notes` were also missing, silently blanking both whenever
+    // the edit form loaded a customer and saved it back.
     return Customer::with([
         'branches:id,name'
     ])
@@ -22,10 +32,13 @@ public function all()
     ->get()
     ->map(function ($customer) {
         return [
+            'id' => $customer->id,
             'customer_id' => Crypt::encryptString($customer->id),
             'name' => $customer->name,
             'email' => $customer->email,
             'phone' => $customer->phone,
+            'status' => $customer->status,
+            'notes' => $customer->notes,
             'branches' => $customer->branches,
         ];
     });
