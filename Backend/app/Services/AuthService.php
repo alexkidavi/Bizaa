@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\NewBusinessRegisteredJob;
 use App\Jobs\SendWelcomeMailJob;
 use App\Models\User;
 use App\Repositories\Contracts\AuthRepositoryInterface;
@@ -75,6 +76,17 @@ class AuthService
             Log::info('WelcomeMail: job dispatched', ['user_id' => $user->id, 'email' => $user->email]);
         } catch (\Throwable $e) {
             Log::error('WelcomeMail: dispatch failed', ['user_id' => $user->id, 'email' => $user->email, 'error' => $e->getMessage()]);
+        }
+
+        // Same "dispatch, log, never let a failure block registration"
+        // treatment as the welcome email above — see NewBusinessRegisteredJob
+        // for who actually gets notified and why this doesn't use the
+        // Bus::batch fan-out pattern CRM campaigns use.
+        try {
+            NewBusinessRegisteredJob::dispatch($business, $user);
+            Log::info('NewBusinessRegisteredMail: job dispatched', ['business_id' => $business->id]);
+        } catch (\Throwable $e) {
+            Log::error('NewBusinessRegisteredMail: dispatch failed', ['business_id' => $business->id, 'error' => $e->getMessage()]);
         }
 
         return [

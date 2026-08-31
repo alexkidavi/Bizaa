@@ -76,19 +76,7 @@
       <div class="w-full max-w-md">
         <!-- Logo -->
         <div class="flex justify-center mb-8">
-          <div class="flex items-center gap-3">
-            <div
-              class="h-11 w-11 flex items-center justify-center rounded-xl bg-[#229DE7] text-white"
-            >
-              <Receipt :size="24" :stroke-width="2.5" />
-            </div>
-            <div class="leading-tight">
-              <div class="text-xl font-extrabold tracking-tight">
-                Bi<span class="text-[#229DE7]">zaa</span>
-              </div>
-              <div class="text-xs text-slate-400 tracking-wide">Smart Retail POS</div>
-            </div>
-          </div>
+          <img src="/bizaa-logo.png" alt="Bizaa POS" class="h-11 w-auto" />
         </div>
 
         <!-- Mobile step progress bar -->
@@ -333,7 +321,7 @@
 <script setup>
 import { ref, reactive } from "vue";
 import { useRouter } from "vue-router";
-import { Receipt, EyeIcon, EyeOffIcon } from "lucide-vue-next";
+import { EyeIcon, EyeOffIcon } from "lucide-vue-next";
 import RegisterService from "@/services/RegisterService";
 import axios from "axios";
 import Swal from "sweetalert2";

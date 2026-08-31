@@ -22,21 +22,18 @@
         class="p-4 flex items-center justify-between border-b border-[#EEF5FB] flex-shrink-0"
       >
         <div class="flex items-center gap-2 min-w-0">
-          <div
-            class="w-8 h-8 rounded-xl bg-gradient-to-br from-[#229DE7] to-[#5BB8F5] flex items-center justify-center shadow-md flex-shrink-0"
-          >
-            <span class="text-white font-extrabold text-base">B</span>
-          </div>
-          <div v-if="showLabel" class="min-w-0">
-            <div
-              class="font-extrabold text-sm text-slate-900 leading-none whitespace-nowrap"
-            >
-              Bizaa
-            </div>
-            <div class="text-[9px] font-bold text-[#229DE7] uppercase tracking-widest">
-              Inventory
-            </div>
-          </div>
+          <img
+            v-if="showLabel"
+            src="/bizaa-logo.png"
+            alt="Bizaa POS"
+            class="h-8 w-auto flex-shrink-0"
+          />
+          <img
+            v-else
+            src="/bizaa-icon.png"
+            alt="Bizaa"
+            class="w-8 h-8 flex-shrink-0"
+          />
         </div>
         <button
           @click="collapsed = !collapsed"

@@ -12,10 +12,12 @@
     <LandingTestimonials />
     <LandingCtaBand />
     <LandingFooter />
+    <LandingWhatsAppWidget />
   </div>
 </template>
 
 <script setup>
+import LandingWhatsAppWidget from "./components/LandingWhatsAppWidget.vue";
 import LandingNavbar from "./components/LandingNavbar.vue";
 import LandingHero from "./components/LandingHero.vue";
 import LandingLogoBar from "./components/LandingLogoBar.vue";

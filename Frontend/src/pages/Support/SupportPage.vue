@@ -10,7 +10,7 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <!-- WhatsApp -->
       <a
-        href="https://wa.me/254705030613"
+        :href="waLink()"
         target="_blank"
         rel="noopener"
         class="flex items-start gap-4 p-5 bg-white rounded-2xl border border-[#D9EBF7] hover:border-[#229de7] hover:shadow-md transition cursor-pointer group"
@@ -22,14 +22,14 @@
         </div>
         <div>
           <p class="font-bold text-slate-900 text-sm">WhatsApp Chat</p>
-          <p class="text-slate-500 text-xs mt-0.5">+254 705 030 613</p>
+          <p class="text-slate-500 text-xs mt-0.5">{{ displayPhone }}</p>
           <p class="text-green-600 text-xs font-semibold mt-1">Chat now →</p>
         </div>
       </a>
 
       <!-- Phone -->
       <a
-        href="tel:+254705030613"
+        :href="`tel:${settings?.support_phone || fallbackPhone}`"
         class="flex items-start gap-4 p-5 bg-white rounded-2xl border border-[#D9EBF7] hover:border-[#229de7] hover:shadow-md transition cursor-pointer group"
       >
         <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#eaf5fd] text-[#229de7] group-hover:bg-[#d0ebf8] transition">
@@ -39,14 +39,14 @@
         </div>
         <div>
           <p class="font-bold text-slate-900 text-sm">Call Us</p>
-          <p class="text-slate-500 text-xs mt-0.5">+254 705 030 613</p>
+          <p class="text-slate-500 text-xs mt-0.5">{{ settings?.support_phone || fallbackPhone }}</p>
           <p class="text-[#229de7] text-xs font-semibold mt-1">Call now →</p>
         </div>
       </a>
 
       <!-- Email -->
       <a
-        href="mailto:brimsoftsolutions@gmail.com"
+        :href="`mailto:${settings?.support_email || fallbackEmail}`"
         class="flex items-start gap-4 p-5 bg-white rounded-2xl border border-[#D9EBF7] hover:border-[#229de7] hover:shadow-md transition cursor-pointer group"
       >
         <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-purple-100 text-purple-600 group-hover:bg-purple-200 transition">
@@ -57,7 +57,7 @@
         </div>
         <div>
           <p class="font-bold text-slate-900 text-sm">Email Support</p>
-          <p class="text-slate-500 text-xs mt-0.5">brimsoftsolutions@gmail.com</p>
+          <p class="text-slate-500 text-xs mt-0.5">{{ settings?.support_email || fallbackEmail }}</p>
           <p class="text-purple-600 text-xs font-semibold mt-1">Send email →</p>
         </div>
       </a>
@@ -137,28 +137,28 @@
     </div>
 
     <!-- Social links -->
-    <div class="bg-white rounded-2xl border border-[#D9EBF7] p-6">
+    <div v-if="hasSocials" class="bg-white rounded-2xl border border-[#D9EBF7] p-6">
       <h2 class="font-extrabold text-slate-900 text-base mb-3">Find us on social media</h2>
       <div class="flex flex-wrap gap-3">
-        <a href="https://facebook.com/bizaakenya" target="_blank" rel="noopener"
+        <a v-if="settings?.facebook_url" :href="settings.facebook_url" target="_blank" rel="noopener"
           class="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 bg-[#F0F6FB] border border-[#D9EBF7] rounded-full hover:bg-[#eaf5fd] hover:border-[#229de7] hover:text-[#229de7] transition">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
           Facebook
         </a>
-        <a href="https://instagram.com/bizaakenya" target="_blank" rel="noopener"
+        <a v-if="settings?.instagram_url" :href="settings.instagram_url" target="_blank" rel="noopener"
           class="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 bg-[#F0F6FB] border border-[#D9EBF7] rounded-full hover:bg-[#eaf5fd] hover:border-[#229de7] hover:text-[#229de7] transition">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
           Instagram
         </a>
-        <a href="https://twitter.com/bizaakenya" target="_blank" rel="noopener"
+        <a v-if="settings?.twitter_url" :href="settings.twitter_url" target="_blank" rel="noopener"
           class="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 bg-[#F0F6FB] border border-[#D9EBF7] rounded-full hover:bg-[#eaf5fd] hover:border-[#229de7] hover:text-[#229de7] transition">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.259 5.632L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
           X / Twitter
         </a>
-        <a href="https://tiktok.com/@bizaakenya" target="_blank" rel="noopener"
+        <a v-if="settings?.linkedin_url" :href="settings.linkedin_url" target="_blank" rel="noopener"
           class="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 bg-[#F0F6FB] border border-[#D9EBF7] rounded-full hover:bg-[#eaf5fd] hover:border-[#229de7] hover:text-[#229de7] transition">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.75a8.24 8.24 0 0 0 4.83 1.55V6.85a4.85 4.85 0 0 1-1.06-.16z"/></svg>
-          TikTok
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+          LinkedIn
         </a>
       </div>
     </div>
@@ -166,7 +166,18 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { usePlatformSettings } from '@/composables/usePlatformSettings'
+
+const { settings, fetchSettings, waLink } = usePlatformSettings()
+onMounted(fetchSettings)
+
+const fallbackPhone = '+254705030613'
+const fallbackEmail = 'brimsoftsolutions@gmail.com'
+const displayPhone = computed(() => settings.value?.support_phone || fallbackPhone)
+const hasSocials = computed(() =>
+  !!(settings.value?.facebook_url || settings.value?.instagram_url || settings.value?.twitter_url || settings.value?.linkedin_url)
+)
 
 const open = ref(null)
 
@@ -187,7 +198,7 @@ function sendWhatsApp() {
     form.value.message,
   ].filter(Boolean).join('\n')
 
-  window.open(`https://wa.me/254705030613?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
+  window.open(waLink(text), '_blank', 'noopener')
 }
 
 const faqs = [

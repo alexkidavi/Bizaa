@@ -56,9 +56,10 @@ export function usePlatformSettings() {
     return /^(https?:\/\/|data:)/i.test(path) ? path : `${BASE_URL}/storage/${path}`;
   };
 
-  const waLink = () => {
+  const waLink = (text = "") => {
     const n = settings.value?.whatsapp_number || FALLBACK.whatsapp_number;
-    return `https://wa.me/${n.replace(/\D/g, "")}`;
+    const base = `https://wa.me/${n.replace(/\D/g, "")}`;
+    return text ? `${base}?text=${encodeURIComponent(text)}` : base;
   };
 
   return { settings, fetchSettings, logoUrl, waLink };
