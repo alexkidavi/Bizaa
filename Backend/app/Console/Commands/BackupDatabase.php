@@ -6,6 +6,8 @@ use Illuminate\Console\Command;
 
 class BackupDatabase extends Command
 {
+
+
     protected $signature = 'backup:daily';
     protected $description = 'Run a custom daily database backup';
 
