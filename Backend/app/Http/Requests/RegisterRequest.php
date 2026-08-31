@@ -33,6 +33,10 @@ class RegisterRequest extends FormRequest
             'business_industry' => 'required|string|max:100',
             'business_location' => 'required|string|max:100',
             'business_website'  => 'nullable|string|max:255',
+            // Where the signup happened — 'web' today, a future mobile app
+            // would send 'mobile'. Optional so older/other clients that
+            // don't send it yet aren't broken.
+            'source'            => 'nullable|string|max:30',
         ];
     }
 

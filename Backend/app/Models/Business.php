@@ -16,6 +16,7 @@ class Business extends Model
         'report_brand_color',
         'business_industry',
         'business_location',
+        'source',
         'business_code',
         'tax_rate',
         'kra_pin',

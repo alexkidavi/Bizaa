@@ -60,6 +60,7 @@
                                                 ['Owner name', $owner->name],
                                                 ['Owner email', $owner->email],
                                                 ['Owner phone', $owner->phone],
+                                                ['Registered via', $business->source ? ucfirst($business->source) : 'Unknown'],
                                                 ['Registered at', $business->created_at?->format('d M Y, H:i')],
                                             ] as [$label, $value])
                                                 @if($value)

@@ -22,6 +22,7 @@ class AuthRepository implements AuthRepositoryInterface
             'business_website'  => $data['business_website'] ?? null,
             'business_industry' => $data['business_industry'],
             'business_location' => $data['business_location'],
+            'source'            => $data['source'] ?? null,
             'business_code'     => 'TMP',
         ]);
 

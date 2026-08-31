@@ -471,6 +471,7 @@ const register = async () => {
       business_industry: form.business_industry,
       business_location: form.business_location,
       business_website: form.business_website || null,
+      source: "web",
     });
 
     // 🎉 success alert with countdown
