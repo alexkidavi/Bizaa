@@ -8,6 +8,7 @@ import "vue-toast-notification/dist/theme-sugar.css"; // make sure this is impor
 import 'vue-multiselect/dist/vue-multiselect.css'
 import axios from "axios";
 import { useAuthStore } from "./stores/auth";
+import { initPwa } from "./pwa.js";
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -59,3 +60,6 @@ axios.interceptors.response.use(
 app.config.globalProperties.$axios = axios;
 
 app.mount("#app");
+
+// Register the POS service worker (production builds only).
+initPwa();
