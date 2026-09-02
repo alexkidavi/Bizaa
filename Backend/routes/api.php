@@ -15,6 +15,7 @@ use App\Http\Controllers\{
     MpesaController,
     RegisterController,
     SaleController,
+    PosController,
     StockController,
     UnitController,
     CustomerController,
@@ -334,6 +335,18 @@ Route::prefix('sales')->middleware(['auth:api', 'subscription'])->group(function
 
     Route::delete('/{id}/delete', [SaleController::class, 'destroy'])
         ->middleware('permission:sales.delete');
+});
+
+/*
+|--------------------------------------------------------------------------
+| POS — OFFLINE SUPPORT
+|--------------------------------------------------------------------------
+| Snapshot the installed POS caches locally so it keeps selling with no
+| connection. Offline sales themselves replay through POST /sales/pos-sale.
+*/
+Route::prefix('pos')->middleware(['auth:api', 'subscription'])->group(function () {
+    Route::get('/offline-bootstrap', [PosController::class, 'offlineBootstrap'])
+        ->middleware('permission:sales.create');
 });
 
 /*

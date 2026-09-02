@@ -20,6 +20,13 @@ class Sale extends Model
         'tax',
         'total',
 
+        // Offline POS (see 2026_09_02_000001 migration)
+        'client_sale_id',
+        'is_offline',
+        'client_created_at',
+        'synced_at',
+        'stock_shortfall',
+
         'digitax_sale_id',
         'kra_receipt_number',
         'kra_invoice_number',
@@ -34,6 +41,10 @@ class Sale extends Model
 
     protected $casts = [
         'digitax_synced_at' => 'datetime',
+        'is_offline' => 'boolean',
+        'client_created_at' => 'datetime',
+        'synced_at' => 'datetime',
+        'stock_shortfall' => 'array',
     ];
 
     /*

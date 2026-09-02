@@ -26,7 +26,30 @@ class SaleRepository implements SaleRepositoryInterface
 
     public function createPosSale($data)
     {
-        return DB::transaction(function () use ($data) {
+        /*
+        |-----------------------------------------
+        | 0. IDEMPOTENCY (OFFLINE OUTBOX REPLAY)
+        |-----------------------------------------
+        | The POS sends a client-generated `client_sale_id` on every sale.
+        | The offline outbox drainer can POST the same queued sale more than
+        | once (retry after a timeout, a double drain, a lost 200 response).
+        | If we've already recorded this exact sale, return it untouched
+        | instead of creating a duplicate + double-decrementing stock.
+        */
+        if (!empty($data['client_sale_id'])) {
+            $existing = Sale::where('business_id', $data['business_id'])
+                ->where('client_sale_id', $data['client_sale_id'])
+                ->first();
+
+            if ($existing) {
+                return $existing->load(['items', 'payments']);
+            }
+        }
+
+        $isOffline = (bool) ($data['is_offline'] ?? false);
+
+        try {
+        return DB::transaction(function () use ($data, $isOffline) {
             /*
             |-----------------------------------------
             | 1. CREATE SALE (HEADER)
@@ -40,11 +63,19 @@ class SaleRepository implements SaleRepositoryInterface
                 'customer_id'    => $data['customer_id'] ?? null,
                 'reference'      => $data['reference'] ?? strtoupper('POS-' . uniqid()),
 
+                'client_sale_id'    => $data['client_sale_id'] ?? null,
+                'is_offline'        => $isOffline,
+                'client_created_at' => $data['client_created_at'] ?? null,
+                'synced_at'         => $isOffline ? now() : null,
+
                 'subtotal'       => $data['subtotal'],
                 'discount'       => $data['discount'] ?? 0,
                 'tax'            => $data['tax'] ?? 0,
                 'total'          => $data['total'],
             ]);
+
+            // Collected across the item loop; written back to the sale after.
+            $stockShortfall = [];
 
             /*
             |-----------------------------------------
@@ -74,13 +105,35 @@ class SaleRepository implements SaleRepositoryInterface
                     ->lockForUpdate()
                     ->first();
 
-                // No product_branch row at all means zero stock has ever
-                // been provisioned for this product at this branch — that
-                // used to silently skip the check (and the decrement),
-                // letting it sell without limit. Treat it the same as an
-                // insufficient-stock row: block the sale.
-                if (!$productBranch || (float) $productBranch->stock < $quantity) {
+                $available = $productBranch ? (float) $productBranch->stock : 0;
+                $short = !$productBranch || $available < $quantity;
+
+                if ($short && !$isOffline) {
+                    // Online sale: the cashier is looking at the screen right
+                    // now and can drop the line. No product_branch row at all
+                    // means zero stock was ever provisioned here — same
+                    // outcome, block the sale.
                     throw new \Exception("Insufficient stock for product ID {$productId}");
+                }
+
+                if ($short && $isOffline) {
+                    // Offline sale: the goods already left the shop hours ago —
+                    // rejecting it now just loses a real, paid transaction.
+                    // Record the shortfall for the manager's variance report
+                    // and let branch stock go negative so the books stay honest.
+                    $stockShortfall[] = [
+                        'product_id' => $productId,
+                        'requested'  => $quantity,
+                        'available'  => $available,
+                    ];
+
+                    if (!$productBranch) {
+                        $productBranch = ProductBranch::create([
+                            'product_id' => $productId,
+                            'branch_id'  => $data['branch_id'],
+                            'stock'      => 0,
+                        ]);
+                    }
                 }
 
                 $productBranch->decrement('stock', $quantity);
@@ -168,8 +221,28 @@ class SaleRepository implements SaleRepositoryInterface
             // loyalty is disabled or there's no customer on this sale.
             $this->loyalty->earnForSale($sale);
 
+            if (!empty($stockShortfall)) {
+                $sale->update(['stock_shortfall' => $stockShortfall]);
+            }
+
             return $sale->load(['items', 'payments']);
         });
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            // A concurrent replay of the same offline sale won the race to
+            // insert between the idempotency check above and this insert.
+            // Return the row it wrote rather than surfacing a DB error.
+            if (!empty($data['client_sale_id'])) {
+                $winner = Sale::where('business_id', $data['business_id'])
+                    ->where('client_sale_id', $data['client_sale_id'])
+                    ->first();
+
+                if ($winner) {
+                    return $winner->load(['items', 'payments']);
+                }
+            }
+
+            throw $e;
+        }
     }
 
     /**

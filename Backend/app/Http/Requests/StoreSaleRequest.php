@@ -30,6 +30,14 @@ class StoreSaleRequest extends FormRequest
                 Rule::exists('customers', 'id')->where(fn ($q) => $q->where('business_id', $businessId)),
             ],
             'reference' => ['nullable', 'string', 'max:255'],
+
+            // Offline POS. The client sends `client_sale_id` on every sale
+            // (idempotency key); `is_offline` + `client_created_at` are only
+            // set when the sale was queued in the outbox while disconnected.
+            'client_sale_id'    => ['nullable', 'uuid'],
+            'is_offline'        => ['nullable', 'boolean'],
+            'client_created_at' => ['nullable', 'date'],
+
             'subtotal'  => ['required', 'numeric', 'min:0'],
             'discount'  => ['nullable', 'numeric', 'min:0'],
             'tax'       => ['nullable', 'numeric', 'min:0'],

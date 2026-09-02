@@ -19,7 +19,13 @@ class SaleService
         $data['business_id'] = Auth::user()->business_id;
 
         $sale = $this->repo->createPosSale($data);
-        $this->digitax->syncSale($sale);
+
+        // On an idempotent replay (offline outbox re-POSTing a sale we already
+        // recorded) the repo returns the existing row — `wasRecentlyCreated`
+        // is false and we must not submit it to DigiTax a second time.
+        if ($sale->wasRecentlyCreated) {
+            $this->digitax->syncSale($sale);
+        }
 
         return $sale->fresh(['items', 'payments']);
     }
