@@ -47,6 +47,7 @@ The system is split into two applications that share one API contract:
 - Point-of-sale screen for walk-in sales, with M-Pesa STK Push and manual payment confirmation
 - Invoices and quotations, with PDF generation
 - Sale-level payment ledger (full / partial / pending) with a running balance
+- **Offline mode** — the POS installs as a PWA and keeps selling with no connection: it caches a per-branch snapshot (catalogue, stock, prices, categories, recent customers, receipt header) in IndexedDB, queues sales rung up offline in an outbox, and syncs them automatically once the connection returns. Cash/credit only while offline; every sale carries a client-generated `client_sale_id` so the sync is idempotent. See **Architecture notes → Offline POS**.
 
 **Purchasing & Inventory**
 - Purchase orders from suppliers, with the same partial-payment ledger pattern as sales
@@ -205,7 +206,7 @@ MySQL, 97 tables. This is a grouped overview, not a full DDL dump — the author
 | **Queue/cache infra** | `jobs`, `job_batches`, `failed_jobs`, `cache`, `cache_locks`, `migrations` | Laravel-managed, not application data — see **Operations & maintenance**. |
 | **Reference/lookup** | `counties`, `industries`, `banks`, `units`, `categories`, `brands`, `category_branch`, `brand_branch`, `unit_branch` | The `*_branch` pivots scope a lookup (unit/category/brand) to specific branches rather than the whole business. |
 | **Branches** | `branches`, `branch_customer`, `branch_supplier`, `product_branch`, `purchase_branch` | `product_branch` is where per-branch **stock level** actually lives — stock is never a single number on `products`. |
-| **Sales & POS** | `sales`, `sale_items`, `sale_payments`, `customers`, `quotations`, `quotation_items`, `invoices`, `invoice_items`, `invoice_payments` | `sales`/`quotations`/`invoices` each follow the parent + line-items + payments-ledger shape (see Architecture notes → Money ledgers). |
+| **Sales & POS** | `sales`, `sale_items`, `sale_payments`, `customers`, `quotations`, `quotation_items`, `invoices`, `invoice_items`, `invoice_payments` | `sales`/`quotations`/`invoices` each follow the parent + line-items + payments-ledger shape (see Architecture notes → Money ledgers). `sales` also carries the offline-POS columns: `client_sale_id` (client UUID, `unique(business_id, client_sale_id)` — the sync idempotency key), `is_offline`, `client_created_at` (real sale time on the device vs `created_at` = server arrival time), `synced_at`, and `stock_shortfall` (JSON, per-line oversell recorded when an offline sale drove branch stock negative). |
 | **Purchasing & inventory** | `purchases`, `purchase_items`, `purchase_payments`, `suppliers`, `products`, `stock_histories`, `stock_takes`, `stock_take_items` | `stock_histories` is the audit trail for every stock movement (sale, purchase, transfer, adjustment, stock-take correction). |
 | **Expenses** | `expenses`, `expense_categories`, `expense_payments` | Same parent + payments-ledger shape as Sales/Purchases. |
 | **Loyalty** | `loyalty_settings`, `loyalty_point_transactions` | One `loyalty_settings` row per business (points rate, enabled flag); `loyalty_point_transactions` is the earn/redeem ledger. |
@@ -242,6 +243,7 @@ MySQL, 97 tables. This is a grouped overview, not a full DDL dump — the author
 | `/products`, `/categories`, `/brands`, `/units` | 8, 4, 4, 4 | `ProductController` + lookups | Catalog CRUD, product search |
 | `/stocks` | 10 | `StockController` | Stock take, adjustment, branch-to-branch transfer, stock history |
 | `/sales` | 6 | `SaleController`, `DigitaxController` | POS sale creation, sale-level payments, eTIMS submission |
+| `/pos` | 2 | `PosController` | *Offline POS.* `GET /pos/offline-bootstrap?branch_id=` returns the per-branch snapshot the installed PWA caches (catalogue, stock, prices, categories, branches, recent customers, receipt header); `GET /pos/ping` is the reachability/auth probe the POS polls to recover from offline on its own |
 | `/purchases` | 8 | `PurchaseController` | Purchase orders + payments |
 | `/quotations`, `/invoices` | 5, 5 | `QuotationController`, `InvoiceController` | Quote → sale conversion, invoicing |
 | `/expenses`, `/expense-categories` | 7, 4 | `ExpenseController` + lookup | Expense CRUD + payment ledger |
@@ -320,6 +322,8 @@ npm run build
 
 Serve the resulting `dist/` as static files. Set `VITE_APP_URL` in `Frontend/.env` to the **production** backend URL before building — it's baked into the build output at build time, not read at runtime.
 
+The build also emits `dist/sw.js` + `dist/workbox-*.js` + `dist/manifest.webmanifest` for the offline POS — serve them from the site root alongside `index.html` (no config needed if you serve all of `dist/`), and make sure the static host sends `dist/sw.js` with `Content-Type: application/javascript` and **without** a long-lived immutable cache header (the filename is stable, so a far-future cache would pin an old service worker). HTTPS is required for the service worker to register at all.
+
 **Case-sensitive imports**: this repo is developed on Windows/macOS (case-insensitive filesystems) but deploys to Linux (case-sensitive). An import whose casing doesn't match the real filename builds fine locally and fails on the server with `Could not load .../SomeFile: ENOENT`. If a build fails only on the server, check import casing first.
 
 ---
@@ -350,6 +354,7 @@ Serve the resulting `dist/` as static files. Set `VITE_APP_URL` in `Frontend/.en
 - Case-sensitive import paths → build succeeds locally, fails on the Linux server (see Deployment)
 - Missing/stopped queue worker → campaign sends and report exports silently stick at `pending`/`sending` forever (see above)
 - `decimal:2`-cast money fields serialize as strings → must `(float)` cast before arithmetic (see Database structure)
+- `dist/sw.js` served with a long immutable cache header → cashiers get stuck on an old offline-POS build; serve it uncached (see Deployment → Frontend)
 
 ---
 
@@ -382,6 +387,8 @@ No SMS or payment-gateway SDK is a composer dependency — M-Pesa and DigiTax ar
 | `@heroicons/vue`, `lucide-vue-next` | Icon sets |
 | `qrcode` | Receipt QR codes (eTIMS `offline_url`/`etims_url`) |
 | `crypto-js` | Client-side handling of encrypted opaque IDs (see Core features → Customers) |
+| `vite-plugin-pwa` (dev) | Generates the service worker + web manifest for the offline POS (see Architecture notes → Offline POS) |
+| `idb` | Thin IndexedDB wrapper — stores the offline POS snapshot and outbox (`src/services/offline/`) |
 | `vue-multiselect`, `vue-toast-notification` | Form/UI components |
 
 ---
@@ -396,6 +403,7 @@ No SMS or payment-gateway SDK is a composer dependency — M-Pesa and DigiTax ar
 - **Queued fan-out jobs**: bulk operations (CRM campaign sends, report exports) use `Bus::batch()` — one job per unit of work, a `->finally()` callback that settles the parent record's status once every job in the batch has run, and a per-item ledger table so a single failure is visible and retryable without blocking or hiding the rest of the batch.
 - **Frontend service layer**: each backend resource has a matching `src/services/*Service.js` wrapping the shared Axios instance (`src/services/api.js`), which centralizes the base URL, auth header, and 401/402 session handling.
 - **Case-sensitive imports**: match filename casing exactly — see **Deployment** above for why this builds fine locally and fails on the server.
+- **Offline POS**: only the `/sales/pos` route works offline, and only in a production build (the service worker is disabled in `npm run dev`). `vite-plugin-pwa` (Workbox) generates `dist/sw.js`, precaches the app shell, and — via `navigateFallbackAllowlist: [/^\/sales\/pos/]` — serves the cached shell for POS navigations only; every other route still needs the network. `src/pwa.js` registers it with `registerType: 'prompt'` so a new deploy never activates mid-shift (the POS shows a "New version — Reload" prompt instead). The offline data path: `PosOfflineService` (backend) builds the snapshot → `services/offline/PosSyncService.js` fetches it → `services/offline/db.js` (IndexedDB via `idb`) stores it per branch → `stores/posOffline.js` is the coordinator (connectivity state, snapshot freshness, the outbox, a 20s recovery poll against `/pos/ping`). At checkout `POS.vue` posts online as before (now with `client_sale_id`); offline it writes the sale to the IndexedDB outbox, decrements the local stock snapshot, and prints a client-rendered receipt (no eTIMS QR until synced). `SaleRepository::createPosSale` is idempotent on `client_sale_id` and, for `is_offline` sales only, records a `stock_shortfall` and lets branch stock go negative rather than reject a sale the customer already paid for. The outbox drains automatically when connectivity returns; the `PosOfflineBar` component surfaces status, "Sync now", the install button, and a manual retry for any sale the server permanently rejected.
 
 ---
 
