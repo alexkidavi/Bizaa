@@ -79,6 +79,16 @@
           </p>
         </div>
 
+        <!-- Offline: cached session can still run the POS -->
+        <button
+          v-if="canResumeOffline"
+          type="button"
+          @click="resumeOffline"
+          class="mb-4 w-full p-3 bg-amber-50 border border-amber-300 rounded-xl text-sm font-semibold text-amber-800 hover:bg-amber-100"
+        >
+          You're offline — continue to the POS with your saved session
+        </button>
+
         <!-- Success Message -->
         <div
           v-if="successMessage"
@@ -197,7 +207,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import LoginService from "@/services/loginService";
@@ -212,6 +222,26 @@ const passwordVisible = ref(false);
 
 const router = useRouter();
 const auth = useAuthStore();
+
+// Offline + a still-cached session that can run the POS: the login form is
+// useless here (no server to hit), so offer a direct way through instead of
+// leaving the cashier stuck on "Network error". `verify-token` on the way
+// back online re-checks it for real. `navigator.onLine` lies (it's true on a
+// dead Wi-Fi), so a network error from the login attempt itself also counts.
+const sawNetworkError = ref(false);
+const canResumeOffline = computed(
+  () =>
+    (!navigator.onLine || sawNetworkError.value) &&
+    !!auth.token &&
+    auth.hasPermission("sales.create"),
+);
+const resumeOffline = () => router.push("/sales/pos");
+
+onMounted(() => {
+  if (!navigator.onLine && auth.token && auth.hasPermission("sales.create")) {
+    resumeOffline();
+  }
+});
 
 const togglePasswordVisibility = () => {
   passwordVisible.value = !passwordVisible.value;
@@ -265,6 +295,7 @@ const login = async () => {
       errorMessage.value = "Server error. Please try again.";
     } else {
       errorMessage.value = "Network error. Check your connection.";
+      sawNetworkError.value = true;
     }
   } finally {
     loading.value = false;

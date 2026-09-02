@@ -629,8 +629,25 @@ router.beforeEach(async (to, from, next) => {
       }
 
       return next();
-    } catch {
-      auth.clearToken();
+    } catch (err) {
+      // A real 401 means the token was rejected — sign out for good.
+      if (err?.response?.status === 401) {
+        auth.clearToken();
+        return next("/login");
+      }
+
+      // No response at all = we're offline / the server is unreachable.
+      // Do NOT destroy a cached session over a network blip. The POS is
+      // built to run offline, so let a cashier who already has a token and
+      // the sales.create permission straight into it — its own offline
+      // layer re-verifies and syncs once the connection returns.
+      const isPosRoute = to.path.startsWith("/sales/pos");
+      if (isPosRoute && auth.hasPermission("sales.create")) {
+        return next();
+      }
+
+      // Every other route still needs the network — send them to /login,
+      // but keep the token so they're back in as soon as they reconnect.
       return next("/login");
     }
   }
