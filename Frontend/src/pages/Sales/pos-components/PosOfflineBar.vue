@@ -49,8 +49,11 @@
       <button v-if="canInstall" class="ob-btn primary" @click="promptInstall">
         Install POS App
       </button>
-      <span v-else-if="showIosHint" class="ob-muted ob-ios">
+      <span v-else-if="iosHint" class="ob-muted ob-ios">
         Install: Share → Add to Home Screen
+      </span>
+      <span v-else-if="menuHint" class="ob-muted ob-ios">
+        Install: browser menu (⋮) → Install / Apps
       </span>
 
       <button v-if="needsRefresh" class="ob-btn primary" @click="applyUpdate">
@@ -69,7 +72,7 @@ import { usePosInstall } from '@/composables/usePosInstall'
 import { needsRefresh, applyUpdate } from '@/pwa.js'
 
 const store = usePosOffline()
-const { canInstall, showIosHint, promptInstall } = usePosInstall()
+const { canInstall, iosHint, menuHint, promptInstall } = usePosInstall()
 
 const now = ref(Date.now())
 let tick = null
