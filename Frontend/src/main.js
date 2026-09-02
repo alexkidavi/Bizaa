@@ -9,6 +9,7 @@ import 'vue-multiselect/dist/vue-multiselect.css'
 import axios from "axios";
 import { useAuthStore } from "./stores/auth";
 import { initPwa } from "./pwa.js";
+import { APP_ORIGIN } from "./config.js";
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -25,8 +26,8 @@ app.use(VueToast, {
 
 const auth = useAuthStore(pinia);
 
-// ✅ Set axios base URL
-axios.defaults.baseURL = `${import.meta.env.VITE_APP_URL}/`;
+// ✅ Set axios base URL — APP_ORIGIN is '' for same-origin (relative), see config.js
+axios.defaults.baseURL = APP_ORIGIN ? `${APP_ORIGIN}/` : "/";
 
 // ✅ Attach token automatically if available
 axios.interceptors.request.use((config) => {

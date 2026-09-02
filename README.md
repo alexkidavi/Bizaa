@@ -126,7 +126,7 @@ php artisan queue:work   # required for report exports, campaign sends, and welc
 ```bash
 cd Frontend
 npm install
-cp .env.example .env   # then set VITE_APP_URL — see Environment configuration below
+cp .env.example .env   # local dev: keep VITE_APP_URL=http://127.0.0.1:8000 — see Environment configuration
 npm run dev
 ```
 
@@ -192,7 +192,7 @@ Per-business M-Pesa till/DigiTax credentials (if a business uses its own, rather
 
 | Variable | Purpose |
 |---|---|
-| `VITE_APP_URL` | The backend's base URL (e.g. `http://127.0.0.1:8000` locally, `https://api.yourdomain.com` in production). Every `src/services/*.js` file builds its Axios base URL from this — nothing is hardcoded. |
+| `VITE_APP_URL` | The backend's origin — **optional**. Resolved in `src/config.js`: when it's **empty** (the recommended production setup, where the SPA and API are served from the same domain) every API/asset URL is **relative** (`/api/...`), so the app always talks to whatever origin served it and a stale build can't point users at a wrong/unreachable host. Set it **only** when the API is on a *different* origin than the SPA — `http://127.0.0.1:8000` in local dev, or a `https://api.` subdomain in split-origin production. Baked in at build time, not read at runtime. |
 
 ---
 
@@ -320,7 +320,7 @@ npm install
 npm run build
 ```
 
-Serve the resulting `dist/` as static files. Set `VITE_APP_URL` in `Frontend/.env` to the **production** backend URL before building — it's baked into the build output at build time, not read at runtime.
+Serve the resulting `dist/` as static files. If the SPA and the API share a domain (the usual setup — the web server routes `/api` to `Backend/public` and everything else to `dist/index.html`), leave `VITE_APP_URL` **empty** so the app uses relative URLs and always talks to its own origin. Set it before building **only** for a split-origin deployment (API on a separate `api.` subdomain). It's baked into the build at build time, not read at runtime.
 
 The build also emits `dist/sw.js` + `dist/workbox-*.js` + `dist/manifest.webmanifest` for the offline POS — serve them from the site root alongside `index.html` (no config needed if you serve all of `dist/`), and make sure the static host sends `dist/sw.js` with `Content-Type: application/javascript` and **without** a long-lived immutable cache header (the filename is stable, so a far-future cache would pin an old service worker). HTTPS is required for the service worker to register at all.
 

@@ -1,7 +1,8 @@
 import axios from "axios";
 import { attachSessionHandling } from "./attachSessionHandling.js";
+import { API_BASE_URL } from "@/config";
 
-const api = axios.create({ baseURL: `${import.meta.env.VITE_APP_URL}/api/superadmin` });
+const api = axios.create({ baseURL: `${API_BASE_URL}/superadmin` });
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");

@@ -10,9 +10,10 @@
 
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
+import { API_BASE_URL } from '@/config'
 
 const client = axios.create({
-  baseURL: `${import.meta.env.VITE_APP_URL}/api`,
+  baseURL: API_BASE_URL,
   timeout: 20000,
 })
 

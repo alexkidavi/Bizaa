@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { API_BASE_URL } from '@/config';
 
-const API = `${import.meta.env.VITE_APP_URL}/api/auth/`;
+const API = `${API_BASE_URL}/auth/`;
 
 export default {
   register: (data) => {

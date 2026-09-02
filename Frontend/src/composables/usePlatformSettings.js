@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import PlatformSettingsService from "@/services/PlatformSettingsService";
+import { ASSET_BASE_URL } from "@/config";
 
 // Module-level singleton — Navbar, Footer, and Privacy can all use this
 // composable on the same page load without each firing its own request;
@@ -8,7 +9,7 @@ const settings = ref(null);
 const loaded = ref(false);
 let inFlight = null;
 
-const BASE_URL = import.meta.env.VITE_APP_URL;
+const BASE_URL = ASSET_BASE_URL;
 
 const FALLBACK = {
   company_name: "Bizaa",

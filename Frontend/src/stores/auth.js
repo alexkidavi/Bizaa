@@ -1,6 +1,7 @@
 // src/stores/auth.js
 import { defineStore } from "pinia";
 import axios from "axios";
+import { API_BASE_URL } from "@/config";
 
 export const useAuthStore = defineStore("auth", {
   state: () => ({
@@ -69,7 +70,7 @@ export const useAuthStore = defineStore("auth", {
       if (this._superAdminVerified !== null) return this._superAdminVerified;
 
       try {
-        await axios.get(`${import.meta.env.VITE_APP_URL}/api/who/check`, {
+        await axios.get(`${API_BASE_URL}/who/check`, {
           headers: { Authorization: `Bearer ${this.token}` },
         });
         this._superAdminVerified = true;
@@ -93,7 +94,7 @@ export const useAuthStore = defineStore("auth", {
 
       try {
         const api = axios.create({
-          baseURL: `${import.meta.env.VITE_APP_URL}/api`,
+          baseURL: API_BASE_URL,
           headers: {
             Authorization: `Bearer ${this.token}`,
           },

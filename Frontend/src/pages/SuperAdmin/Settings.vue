@@ -96,13 +96,14 @@
 import { ref, reactive, onMounted } from "vue";
 import Swal from "sweetalert2";
 import superAdminService from "@/services/SuperAdminService";
+import { ASSET_BASE_URL } from "@/config";
 
 const loading = ref(true);
 const saving = ref(false);
 const logoFile = ref(null);
 const logoPreview = ref(null);
 const logoPath = ref(null);
-const BASE_URL = import.meta.env.VITE_APP_URL;
+const BASE_URL = ASSET_BASE_URL;
 
 const form = reactive({
   company_name: "",

@@ -1,9 +1,10 @@
 // services/api.js
 import axios from "axios";
 import { attachSessionHandling } from "./attachSessionHandling.js";
+import { API_BASE_URL } from "@/config";
 
 const api = axios.create({
-  baseURL: `${import.meta.env.VITE_APP_URL}/api`,
+  baseURL: API_BASE_URL,
 });
 
 api.interceptors.request.use((config) => {
