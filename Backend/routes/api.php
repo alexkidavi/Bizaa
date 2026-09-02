@@ -324,6 +324,14 @@ Route::prefix('sales')->middleware(['auth:api', 'subscription'])->group(function
     Route::post('/{id}/digitax-sync', [DigitaxController::class, 'syncSale'])
         ->middleware('permission:sales.view');
 
+    // Print (app downloads the PDF and hands it to the OS print dialog)
+    // and email (queued) — both render from the same receipt template,
+    // see SaleReceiptService.
+    Route::get('/{id}/receipt-pdf', [SaleController::class, 'receiptPdf'])
+        ->middleware('permission:sales.view');
+    Route::post('/{id}/email-receipt', [SaleController::class, 'emailReceipt'])
+        ->middleware('permission:sales.view');
+
     Route::delete('/{id}/delete', [SaleController::class, 'destroy'])
         ->middleware('permission:sales.delete');
 });
