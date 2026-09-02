@@ -263,9 +263,12 @@
       <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
         Payment Method
       </p>
+      <p v-if="offline" class="text-[10px] font-semibold text-amber-600 -mt-1 mb-2">
+        Offline — cash &amp; credit only. M-Pesa, split and points need a connection.
+      </p>
       <div class="payment-pills">
         <button
-          v-for="m in paymentMethods"
+          v-for="m in availablePaymentMethods"
           :key="m.value"
           @click="$emit('update:selectedPayment', m.value)"
           class="payment-pill"
@@ -473,6 +476,9 @@ const props = defineProps({
   change: Number,
   processing: Boolean,
   heldCount: { type: Number, default: 0 },
+  // POS is running with no connection — only payment methods that don't need
+  // a live server call are offered (see offlineMethods below).
+  offline: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -505,7 +511,16 @@ const showMpesaModal = ref(false);
 // charging until there's a customer + a preview that says it's covered
 // (the backend re-validates and is the real authority, but this avoids a
 // pointless round-trip for an obviously-doomed charge), else emit normally.
+// With no connection, only cash + credit are offered.
+const OFFLINE_METHODS = ["cash", "credit"];
+const availablePaymentMethods = computed(() =>
+  props.offline
+    ? paymentMethods.filter((m) => OFFLINE_METHODS.includes(m.value))
+    : paymentMethods
+);
+
 const handleCharge = () => {
+  if (props.offline && !OFFLINE_METHODS.includes(props.selectedPayment)) return;
   if (props.selectedPayment === "mpesa") {
     showMpesaModal.value = true;
     return;

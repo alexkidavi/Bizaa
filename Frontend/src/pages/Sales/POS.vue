@@ -11,6 +11,8 @@
       @close-pos="$router.push('/dashboard')"
       @navigate="handleNavigation"
     />
+
+    <PosOfflineBar />
     <div class="pos-body">
       <!-- Mobile tab switcher -->
       <div class="mobile-tabs">
@@ -96,6 +98,7 @@
         :change="change"
         :processing="processing"
         :held-count="heldOrders.length"
+        :offline="!posOffline.isOnline"
         @open-customer="showCustomerModal = true"
         @new-order="newOrder"
         @hold-order="holdOrder"
@@ -144,21 +147,36 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRouter } from "vue-router";
 import Swal from "sweetalert2";
 import SalesService from "@/services/SaleService";
 import ProductService from "@/services/ProductService";
 import CategoryService from "@/services/categoryService";
 import BranchesService from "@/services/Branchesservice";
+import { usePosOffline } from "@/stores/posOffline";
 
 import PosTopBar from "./pos-components/PosTopBar.vue";
+import PosOfflineBar from "./pos-components/PosOfflineBar.vue";
 import ProductPanel from "./pos-components/ProductPanel.vue";
 import CartPanel from "./pos-components/CartPanel.vue";
 import PosModals from "./pos-components/PosModals.vue";
 import { useHeldOrders } from "./pos-components/useHeldOrders.js";
 
 const router = useRouter();
+const posOffline = usePosOffline();
+
+/* A cart line carries the encrypted product id as `i.id`; offline stock
+   bookkeeping and the sale payload both need it under `product_id`. */
+const cartToPayloadItems = () =>
+  cart.value.map((i) => ({
+    product_id: i.id,
+    quantity: i.qty,
+    unit_price: i.selling_price,
+    discount: i.discount || 0,
+    note: i.note || "",
+    ...(i.enteredPrice != null ? { sub_total: i.enteredPrice } : {}),
+  }));
 
 /* ── MOBILE TAB ──────────────────────── */
 const mobileTab = ref("products"); // 'products' | 'cart'
@@ -217,6 +235,8 @@ const onBranchChange = async (id) => {
 
   activeBranch.value = id;
   productPage.value = 1;
+  posOffline.setBranch(id);
+  loadCategories();
   fetchProducts();
 };
 
@@ -241,6 +261,19 @@ const hasActiveQuery = computed(
   () => productSearch.value.trim().length > 0 || activeCat.value !== null
 );
 
+const offlineProductQuery = () => ({
+  search: productSearch.value.trim(),
+  categoryId: activeCat.value,
+  page: productPage.value,
+  perPage: productPerPage,
+});
+
+const loadProductsFromSnapshot = async () => {
+  const r = await posOffline.getProducts(offlineProductQuery());
+  products.value = r.data;
+  totalProducts.value = r.total;
+};
+
 const fetchProducts = async () => {
   if (!hasActiveQuery.value) {
     products.value = [];
@@ -249,6 +282,10 @@ const fetchProducts = async () => {
   }
   productsLoading.value = true;
   try {
+    if (!posOffline.isOnline) {
+      await loadProductsFromSnapshot();
+      return;
+    }
     const params = { per_page: productPerPage, page: productPage.value };
     if (activeBranch.value) params.branch_id = activeBranch.value;
     if (productSearch.value.trim()) params.search = productSearch.value.trim();
@@ -258,7 +295,19 @@ const fetchProducts = async () => {
     products.value = Array.isArray(data) ? data : [];
     totalProducts.value =
       res.data?.total || res.data?.meta?.total || products.value.length;
-  } catch {
+    posOffline.reportNetworkSuccess();
+  } catch (err) {
+    // A transport-level failure (no `response`) means we've dropped offline —
+    // fall back to the cached snapshot rather than showing an empty screen.
+    if (!err?.response) {
+      posOffline.reportNetworkFailure();
+      try {
+        await loadProductsFromSnapshot();
+        return;
+      } catch {
+        /* no snapshot either — fall through to empty */
+      }
+    }
     products.value = [];
     totalProducts.value = 0;
   } finally {
@@ -490,35 +539,33 @@ const processPayment = async (mpesaMeta = null) => {
     return;
   }
   processing.value = true;
-  try {
-    const payload = {
-      branch_id: activeBranch.value,
-      customer_id: selectedCustomer.value?.id || null,
-      reference: orderRef.value,
-      payment_method: selectedPayment.value,
-      items: cart.value.map((i) => ({
-        product_id: i.id,
-        quantity: i.qty,
-        unit_price: i.selling_price,
-        discount: i.discount || 0,
-        note: i.note || "",
-        ...(i.enteredPrice != null ? { sub_total: i.enteredPrice } : {}),
-      })),
-      subtotal: subtotal.value,
-      discount: discountAmount.value,
-      tax: taxAmount.value,
-      total: grandTotal.value,
-      cash_tendered: cashTendered.value,
-      change: change.value,
-      // Include M-Pesa transaction details if provided
-      ...(mpesaMeta && {
-        mpesa_code: mpesaMeta.mpesa_meta?.code,
-        mpesa_phone: mpesaMeta.mpesa_meta?.phone,
-        mpesa_method: mpesaMeta.mpesa_meta?.method,
-      }),
-    };
-    const res = await SalesService.create(payload);
-    const createdSale = res?.data?.data ?? res?.data ?? {};
+
+  // One idempotency key per checkout attempt, reused if we retry / queue it.
+  const clientSaleId =
+    (crypto.randomUUID && crypto.randomUUID()) ||
+    "cs-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+
+  const payload = {
+    branch_id: activeBranch.value,
+    customer_id: selectedCustomer.value?.id || null,
+    reference: orderRef.value,
+    client_sale_id: clientSaleId,
+    payment_method: selectedPayment.value,
+    items: cartToPayloadItems(),
+    subtotal: subtotal.value,
+    discount: discountAmount.value,
+    tax: taxAmount.value,
+    total: grandTotal.value,
+    cash_tendered: cashTendered.value,
+    change: change.value,
+    ...(mpesaMeta && {
+      mpesa_code: mpesaMeta.mpesa_meta?.code,
+      mpesa_phone: mpesaMeta.mpesa_meta?.phone,
+      mpesa_method: mpesaMeta.mpesa_meta?.method,
+    }),
+  };
+
+  const buildReceipt = (createdSale = {}) => {
     receiptData.value = {
       ref: orderRef.value,
       date: new Date().toLocaleString("en-KE"),
@@ -533,23 +580,50 @@ const processPayment = async (mpesaMeta = null) => {
       change: 0,
       paymentMethod: mpesaMeta
         ? `M-Pesa${mpesaMeta.mpesa_meta?.code ? " · " + mpesaMeta.mpesa_meta.code : ""}`
-        : {
-            cash: "Cash",
-            mpesa: "M-Pesa",
-            card: "Card",
-            credit: "Credit",
-            split: "Split",
-          }[selectedPayment.value] || "Cash",
+        : { cash: "Cash", mpesa: "M-Pesa", card: "Card", credit: "Credit", split: "Split" }[
+            selectedPayment.value
+          ] || "Cash",
       customer: selectedCustomer.value?.name || null,
-      // DigiTax/eTIMS: etims_url only arrives once KRA finishes processing
-      // (delivered later via callback); offline_url is available right away
-      // and is what the receipt QR shows until etims_url upgrades it.
+      // eTIMS QR: present for online sales once DigiTax responds; an offline
+      // sale has no KRA URL until it's synced, so the receipt prints without
+      // the QR (KRA permits this for offline transactions).
       etimsUrl: createdSale.etims_url || null,
       offlineUrl: createdSale.offline_url || null,
       kraSerial: createdSale.kra_serial_number || null,
+      pendingSync: !!createdSale._offline,
     };
     showReceipt.value = true;
+  };
+
+  const queueOffline = async () => {
+    payload.is_offline = true;
+    payload.client_created_at = new Date().toISOString();
+    await posOffline.enqueueSale(payload);
+    buildReceipt({ _offline: true });
+  };
+
+  try {
+    if (!posOffline.isOnline) {
+      await queueOffline();
+      return;
+    }
+
+    const res = await SalesService.create(payload);
+    posOffline.reportNetworkSuccess();
+    buildReceipt(res?.data?.data ?? res?.data ?? {});
   } catch (err) {
+    // Connection dropped at the moment of checkout — don't lose a paid sale,
+    // queue it in the outbox instead. A real server rejection (has a
+    // response, e.g. 422 insufficient stock) is still surfaced to the cashier.
+    if (!err?.response) {
+      posOffline.reportNetworkFailure();
+      try {
+        await queueOffline();
+        return;
+      } catch {
+        /* fall through to the error toast */
+      }
+    }
     Swal.fire({
       icon: "error",
       title: "Sale Failed",
@@ -647,32 +721,74 @@ const handleKeyboard = (e) => {
   }
 };
 
+const loadCategories = async () => {
+  try {
+    if (!posOffline.isOnline) {
+      categories.value = await posOffline.getCategories();
+      return;
+    }
+    const catRes = await CategoryService.getAll();
+    const rawCats = catRes.data?.data || catRes.data || catRes;
+    categories.value = Array.isArray(rawCats) ? rawCats : [];
+  } catch (err) {
+    if (!err?.response) {
+      posOffline.reportNetworkFailure();
+      categories.value = await posOffline.getCategories();
+    }
+  }
+};
+
+const loadBranches = async () => {
+  try {
+    if (!posOffline.isOnline) {
+      branches.value = await posOffline.getBranches();
+      return;
+    }
+    const branchRes = await BranchesService.getAllBranches();
+    const rawBranches = branchRes.data ?? branchRes;
+    branches.value = Array.isArray(rawBranches) ? rawBranches : rawBranches?.data ?? [];
+  } catch (err) {
+    if (!err?.response) {
+      posOffline.reportNetworkFailure();
+      branches.value = await posOffline.getBranches();
+    }
+  }
+};
+
+// If the connection drops while a server-only payment method is selected,
+// snap back to cash so the cashier can still complete the sale offline.
+watch(
+  () => posOffline.isOnline,
+  (online) => {
+    if (!online && !["cash", "credit"].includes(selectedPayment.value)) {
+      selectedPayment.value = "cash";
+    }
+  }
+);
+
 onMounted(async () => {
   updateClock();
   clockTimer = setInterval(updateClock, 1000);
   window.addEventListener("keydown", handleKeyboard);
-  try {
-    // Customers are no longer preloaded here — PosModals now searches
-    // them server-side, on demand, so this doesn't fetch the whole
-    // customer table on every POS page load (see CustomerService.searchForPos()).
-    const [branchRes, catRes] = await Promise.all([
-      BranchesService.getAllBranches(),
-      CategoryService.getAll(),
-    ]);
-    const rawBranches = branchRes.data ?? branchRes;
-    branches.value = Array.isArray(rawBranches) ? rawBranches : rawBranches?.data ?? [];
-    if (branches.value.length > 0) activeBranch.value = branches.value[0].id;
-    const rawCats = catRes.data?.data || catRes.data || catRes;
-    categories.value = Array.isArray(rawCats) ? rawCats : [];
-  } catch {
-    /* silently continue */
+
+  await loadBranches();
+  if (branches.value.length > 0 && !activeBranch.value) {
+    activeBranch.value = branches.value[0].id;
   }
+
+  // Bring up the offline coordinator for this branch: loads any cached
+  // snapshot, wires online/offline listeners, and (if online) refreshes the
+  // snapshot + flushes the outbox in the background.
+  if (activeBranch.value) await posOffline.init(activeBranch.value);
+
+  await loadCategories();
   focusSearch();
 });
 
 onBeforeUnmount(() => {
   clearInterval(clockTimer);
   window.removeEventListener("keydown", handleKeyboard);
+  posOffline.dispose();
 });
 </script>
 

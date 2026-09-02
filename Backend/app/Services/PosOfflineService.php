@@ -49,6 +49,14 @@ class PosOfflineService
                 'name' => $branch->name,
             ],
 
+            // The full branch list too, so a POS that reloads with no
+            // connection can still populate its branch switcher.
+            'branches' => Branch::where('business_id', $businessId)
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn ($b) => ['id' => $b->id, 'name' => $b->name])
+                ->values(),
+
             'business' => [
                 'name'     => $business?->business_name,
                 'logo'     => $business?->business_logo,

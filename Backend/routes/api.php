@@ -347,6 +347,12 @@ Route::prefix('sales')->middleware(['auth:api', 'subscription'])->group(function
 Route::prefix('pos')->middleware(['auth:api', 'subscription'])->group(function () {
     Route::get('/offline-bootstrap', [PosController::class, 'offlineBootstrap'])
         ->middleware('permission:sales.create');
+
+    // Cheap "is the server reachable + is my token still good" check the POS
+    // polls while it believes it's offline, so it can recover on its own
+    // without waiting for the browser's `online` event.
+    Route::get('/ping', [PosController::class, 'ping'])
+        ->middleware('permission:sales.create');
 });
 
 /*

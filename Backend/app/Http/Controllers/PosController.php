@@ -30,4 +30,10 @@ class PosController extends Controller
             $this->offline->bootstrap((int) $validated['branch_id'])
         );
     }
+
+    /** GET /pos/ping — reachability + auth probe for the offline POS. */
+    public function ping(): JsonResponse
+    {
+        return response()->json(['ok' => true, 'time' => now()->toIso8601String()]);
+    }
 }

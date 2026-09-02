@@ -254,6 +254,9 @@ import { ref, watch, computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { printReceipt, resolveBusiness } from "@/utils/printReceipt";
 import CustomerService from "@/services/CustomerService";
+import { usePosOffline } from "@/stores/posOffline";
+
+const posOffline = usePosOffline();
 
 const auth = useAuthStore();
 const business = computed(() => resolveBusiness(auth.user));
@@ -340,9 +343,19 @@ defineExpose({ printReceipt: doPrintReceipt });
 const runCustomerSearch = async () => {
   customersLoading.value = true;
   try {
+    if (!posOffline.isOnline) {
+      filteredCustomers.value = await posOffline.searchCustomers(customerSearch.value.trim());
+      return;
+    }
     const res = await CustomerService.searchForPos(customerSearch.value.trim());
     filteredCustomers.value = res?.data?.data ?? [];
-  } catch {
+    posOffline.reportNetworkSuccess();
+  } catch (err) {
+    if (!err?.response) {
+      posOffline.reportNetworkFailure();
+      filteredCustomers.value = await posOffline.searchCustomers(customerSearch.value.trim());
+      return;
+    }
     filteredCustomers.value = [];
   } finally {
     customersLoading.value = false;
