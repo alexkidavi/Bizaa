@@ -287,9 +287,244 @@ MySQL, 97 tables. This is a grouped overview, not a full DDL dump — the author
 
 ---
 
+## Server setup (Ubuntu VPS)
+
+One-time hardening + provisioning for a fresh box, before the **Deployment** section below ever runs. Written for Ubuntu 22.04/24.04 LTS + Apache; commands are copy-pasteable but every `example.com`, path, and password below is a placeholder — substitute your own.
+
+### 1. Create a non-root user, lock down SSH
+
+Never operate as root day-to-day, and never let anything log in as root remotely.
+
+```bash
+# as root, first login only
+adduser deploy
+usermod -aG sudo deploy
+
+# copy your public key across before doing anything else
+rsync --archive --chown=deploy:deploy ~/.ssh /home/deploy
+```
+
+Log in as `deploy` in a **second** terminal and confirm `sudo` works before touching SSH config — don't lock yourself out.
+
+Edit `/etc/ssh/sshd_config`:
+
+```
+PermitRootLogin no
+PasswordAuthentication no      # key-based auth only
+Port 22                        # change if you want SSH off the default port too
+```
+
+```bash
+sudo systemctl restart sshd
+```
+
+### 2. Firewall — only 80/443 (and SSH) reachable
+
+```bash
+sudo apt install ufw -y
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow OpenSSH          # or `sudo ufw allow 2222/tcp` if you changed the SSH port above
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+sudo ufw status verbose
+```
+
+Everything else — including MySQL's port — stays closed to the outside world. The app connects to MySQL over `127.0.0.1` on the same box, so that port never needs a firewall rule opening it externally at all; see MySQL below.
+
+### 3. fail2ban
+
+```bash
+sudo apt install fail2ban -y
+sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+```
+
+In `/etc/fail2ban/jail.local`, under `[sshd]` (and add `[apache-auth]`/`[apache-badbots]`/`[apache-noscript]` sections if you want Apache-level protection too — the filters ship with fail2ban already):
+
+```ini
+[sshd]
+enabled = true
+maxretry = 5
+findtime = 10m
+bantime = 1h
+```
+
+```bash
+sudo systemctl restart fail2ban
+sudo fail2ban-client status sshd   # confirm the jail is active
+```
+
+### 4. MySQL — bind to localhost, move off the default port
+
+Two separate protections, both worth doing: the port change is defense-in-depth against automated scans; binding to `127.0.0.1` is what actually matters, since it makes the port unreachable from outside regardless of the firewall.
+
+```bash
+sudo apt install mysql-server -y
+sudo mysql_secure_installation
+```
+
+Edit `/etc/mysql/mysql.conf.d/mysqld.cnf`:
+
+```ini
+[mysqld]
+bind-address = 127.0.0.1
+port = 3307            # anything other than the default 3306
+```
+
+```bash
+sudo systemctl restart mysql
+```
+
+Create the app database and a **scoped** user (not root, not `ALL PRIVILEGES *.*`) — matches `Backend/.env`'s `DB_*` variables:
+
+```sql
+CREATE DATABASE bizaa CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'bizaa_app'@'localhost' IDENTIFIED BY 'a-real-generated-password';
+GRANT ALL PRIVILEGES ON bizaa.* TO 'bizaa_app'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+Then in `Backend/.env`: `DB_HOST=127.0.0.1`, `DB_PORT=3307`, `DB_DATABASE=bizaa`, `DB_USERNAME=bizaa_app`, `DB_PASSWORD=...`.
+
+### 5. PHP, Composer, Node, Apache
+
+```bash
+sudo apt install software-properties-common -y
+sudo add-apt-repository ppa:ondrej/php -y
+sudo apt update
+
+sudo apt install apache2 php8.3 libapache2-mod-php8.3 \
+  php8.3-mysql php8.3-mbstring php8.3-xml php8.3-curl \
+  php8.3-zip php8.3-gd php8.3-bcmath php8.3-intl -y
+
+curl -sS https://getcomposer.org/installer | php
+sudo mv composer.phar /usr/local/bin/composer
+
+# Node — only needed on this box if you build the frontend here rather
+# than uploading a pre-built dist/ from CI/your machine
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+sudo apt install nodejs -y
+
+sudo a2enmod rewrite ssl headers
+sudo systemctl enable --now apache2
+```
+
+### 6. Apache virtual host
+
+One domain serving both — Laravel's `Backend/public` under `/api`, the Vue build for everything else, with `FallbackResource` handling client-side routing so a hard refresh on `/dashboard` doesn't 404.
+
+`/etc/apache2/sites-available/bizaa.conf`:
+
+```apache
+<VirtualHost *:80>
+    ServerName app.example.com
+    Redirect permanent / https://app.example.com/
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName app.example.com
+    DocumentRoot /var/www/bizaa/Frontend/dist
+
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/app.example.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/app.example.com/privkey.pem
+
+    # API — Laravel backend. This Alias is exactly the setup Environment
+    # configuration → API_ROUTE_PREFIX warns about: it strips /api before
+    # Laravel ever sees the request, so Backend/.env MUST set
+    # API_ROUTE_PREFIX="" here or every routes/api.php route 404s.
+    Alias /api /var/www/bizaa/Backend/public
+    <Directory /var/www/bizaa/Backend/public>
+        AllowOverride All
+        Require all granted
+        Options -Indexes +FollowSymLinks
+    </Directory>
+
+    # SPA — everything else falls back to index.html for client-side routing
+    <Directory /var/www/bizaa/Frontend/dist>
+        AllowOverride All
+        Require all granted
+        FallbackResource /index.html
+    </Directory>
+
+    # dist/sw.js (the offline-POS service worker) must never get a
+    # long-lived cache header — see Operations & maintenance → Known
+    # operational gotchas for what breaks if it does.
+    <FilesMatch "^sw\.js$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+
+    ErrorLog ${APACHE_LOG_DIR}/bizaa-error.log
+    CustomLog ${APACHE_LOG_DIR}/bizaa-access.log combined
+</VirtualHost>
+```
+
+```bash
+sudo a2ensite bizaa.conf
+sudo apache2ctl configtest
+sudo systemctl reload apache2
+```
+
+If instead you split the API onto its own subdomain (`api.example.com`), use two separate `<VirtualHost>` blocks with plain `DocumentRoot`s (no `Alias`) — then leave `API_ROUTE_PREFIX` **unset** in `.env` (the normal default) and set `VITE_APP_URL=https://api.example.com` before building the frontend.
+
+### 7. Let's Encrypt (HTTPS)
+
+```bash
+sudo apt install certbot python3-certbot-apache -y
+sudo certbot --apache -d app.example.com
+```
+
+Certbot edits the vhost in place to add the SSL directives and sets up a systemd timer for renewal automatically on modern Ubuntu — verify it:
+
+```bash
+sudo systemctl list-timers | grep certbot
+sudo certbot renew --dry-run
+```
+
+HTTPS isn't optional here beyond "best practice" — the offline-POS service worker (see Architecture notes → Offline POS) refuses to register at all over plain HTTP.
+
+### 8. Supervisor (queue worker)
+
+```bash
+sudo apt install supervisor -y
+sudo cp /var/www/bizaa/Backend/deploy/supervisor-bizaa-worker.conf /etc/supervisor/conf.d/
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start bizaa-worker:*
+sudo supervisorctl status
+```
+
+Full detail on what this protects (campaign sends, report exports) is in `Backend/deploy/QUEUE_WORKER.md`.
+
+### 9. File permissions
+
+```bash
+sudo chown -R deploy:www-data /var/www/bizaa
+sudo find /var/www/bizaa/Backend/storage /var/www/bizaa/Backend/bootstrap/cache -type d -exec chmod 775 {} \;
+sudo find /var/www/bizaa/Backend/storage /var/www/bizaa/Backend/bootstrap/cache -type f -exec chmod 664 {} \;
+```
+
+### Hardening checklist
+
+- [ ] Root SSH login disabled, password auth disabled (key-only)
+- [ ] UFW default-deny, only SSH + 80 + 443 open
+- [ ] fail2ban active on `sshd` (and Apache jails, if enabled)
+- [ ] MySQL bound to `127.0.0.1`, moved off port 3306, no firewall rule exposes it
+- [ ] MySQL app user is scoped to one database, not root/`ALL PRIVILEGES *.*`
+- [ ] `Backend/.env`: `APP_ENV=production`, `APP_DEBUG=false`
+- [ ] HTTPS live via Let's Encrypt, auto-renewal confirmed with `certbot renew --dry-run`
+- [ ] Supervisor running the queue worker (`supervisorctl status` shows `RUNNING`)
+- [ ] `dist/sw.js` served with `Cache-Control: no-cache` (see vhost above)
+- [ ] Scheduled MySQL backups configured (see Operations & maintenance — not automated by this repo)
+
+---
+
 ## Deployment
 
 Production shape: Apache/Nginx serving the Laravel `Backend/public` as the API, a static build of `Frontend/dist` served separately (own vhost or same host, different path/subdomain), MySQL, and a Supervisor-managed queue worker. There's no Docker/CI pipeline in this repo yet — deploys are a `git pull` + script on the server.
+
+First time on a given box, work through **Server setup** above first (firewall, MySQL, the vhost, Supervisor, HTTPS) — everything below assumes that's already done and is the *recurring* per-release flow on top of it.
 
 ### Backend
 
