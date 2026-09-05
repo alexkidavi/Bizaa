@@ -167,11 +167,12 @@
           </div>
         </div>
 
-        <!-- Demo Login Button (dev builds only; stripped from production bundle) -->
+        <!-- Try Demo — public, one-tap login to a live demo account so a
+             prospect can explore the product without registering first. -->
         <button
-          v-if="isDevMode"
           @click="demoLogin"
-          class="cursor-pointer w-full py-3.5 text-sm font-semibold rounded-xl border border-[#229DE7]/30 text-[#229DE7] bg-[#229DE7]/5 hover:bg-[#229DE7]/10 hover:border-[#229DE7]/50 transition flex items-center justify-center gap-2"
+          :disabled="loading"
+          class="cursor-pointer w-full py-3.5 text-sm font-semibold rounded-xl border border-[#229DE7]/30 text-[#229DE7] bg-[#229DE7]/5 hover:bg-[#229DE7]/10 hover:border-[#229DE7]/50 transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -181,7 +182,7 @@
               d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
             />
           </svg>
-          Login With Demo Account
+          Try Demo
         </button>
 
         <!-- Create Account Link -->
@@ -247,14 +248,10 @@ const togglePasswordVisibility = () => {
   passwordVisible.value = !passwordVisible.value;
 };
 
-// import.meta.env.DEV is a build-time constant: Vite/Rollup dead-code-eliminates
-// this whole branch (including the credential literals) from production bundles.
-const isDevMode = import.meta.env.DEV;
-
-const demoLogin = () => {
-  if (!isDevMode) return;
-  email.value = "admin@brimsoftsolutions.com";
+const demoLogin = async () => {
+  email.value = "demo@gmail.com";
   password.value = "Demo@2026";
+  await login();
 };
 
 const login = async () => {
