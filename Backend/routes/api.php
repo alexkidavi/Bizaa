@@ -872,12 +872,14 @@ Route::middleware('auth:api')->get('/me', function (Request $request) {
         'permissions' => $permissions->values()->all(),
 
         'business' => $business ? [
-            'id'   => Crypt::encryptString($business->id),
-            'name' => $business->business_name,
-            'email' => $business->business_email,
-            'phone'=> $business->business_phone,
+            'id'       => Crypt::encryptString($business->id),
+            'name'     => $business->business_name,
+            'email'    => $business->business_email,
+            'phone'    => $business->business_phone,
             'location' => $business->business_location,
-            'logo' => $business->business_logo
+            'logo'     => $business->business_logo,
+            'website'  => $business->business_website,
+            'industry' => $business->business_industry,
         ] : null,
     ];
 });

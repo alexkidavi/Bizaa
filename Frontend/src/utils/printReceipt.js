@@ -170,20 +170,35 @@ export async function printReceipt(info, biz = {}) {
   win.document.close();
 }
 
-/** Resolve business info from the auth store user object */
+/**
+ * Resolve business info from the auth store user object.
+ *
+ * NOTE: `auth.user.business` comes from GET /me (routes/api.php), which
+ * deliberately re-maps the Business model's "business_"-prefixed columns
+ * (business_name, business_logo, ...) to short unprefixed keys (name, logo,
+ * ...) — NOT the same names as the raw Eloquent model used elsewhere
+ * (ReportBranding, receipt-pdf.blade.php). Mixing the two up here silently
+ * produces the generic "Bizaa" fallback with no logo/contacts, since the
+ * wrong keys just read as undefined. Every place in the frontend that reads
+ * business branding off `auth.user.business` should go through this one
+ * function rather than re-deriving it, so this mapping only needs fixing
+ * in one place if that contract ever changes again.
+ */
 export function resolveBusiness(authUser) {
   const b = authUser?.business ?? {};
-  const raw = (b.business_logo ?? "").trim();
+  const raw = (b.logo ?? "").trim();
   const logo = raw
     ? /^(https?:\/\/|data:)/i.test(raw)
       ? raw
       : `${BASE_URL}/storage/${raw}`
     : null;
   return {
-    name: b.business_name || "Bizaa",
-    address: b.business_location || "",
-    phone: b.business_phone || "",
-    email: b.business_email || "",
+    name: b.name || "Bizaa",
+    address: b.location || "",
+    phone: b.phone || "",
+    email: b.email || "",
+    website: b.website || "",
+    industry: b.industry || "",
     logo,
   };
 }

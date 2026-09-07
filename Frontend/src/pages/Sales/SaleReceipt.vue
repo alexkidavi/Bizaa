@@ -175,26 +175,14 @@ import QRCode from "qrcode";
 import Swal from "sweetalert2";
 import SalesService from "@/services/SaleService";
 import { useAuthStore } from "@/stores/auth";
+import { resolveBusiness } from "@/utils/printReceipt.js";
 
 const route = useRoute();
 const auth = useAuthStore();
 const saleId = route.params.id;
 
 /* ── Business ─────────────────────────── */
-const BASE_URL = import.meta.env.VITE_APP_URL ?? "";
-const resolvedLogo = (() => {
-  const raw = (auth.user?.business?.business_logo ?? "").trim();
-  if (!raw) return null;
-  return /^(https?:\/\/|data:)/i.test(raw) ? raw : `${BASE_URL}/storage/${raw}`;
-})();
-
-const business = {
-  name: auth.user?.business?.business_name || "Bizaa",
-  address: auth.user?.business?.business_location || "",
-  phone: auth.user?.business?.business_phone || "",
-  email: auth.user?.business?.business_email || "",
-  logo: resolvedLogo,
-};
+const business = resolveBusiness(auth.user);
 
 const businessInitials = computed(() =>
   (business.name || "B").substring(0, 2).toUpperCase()
