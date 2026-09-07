@@ -36,8 +36,11 @@
         @if($business?->business_location)
             <div class="biz-sub">{{ $business->business_location }}</div>
         @endif
-        @if($business?->business_phone)
-            <div class="biz-sub">{{ $business->business_phone }}</div>
+        @php
+            $contacts = array_filter([$business?->business_phone, $business?->business_email]);
+        @endphp
+        @if($contacts)
+            <div class="biz-sub">{{ implode(' · ', $contacts) }}</div>
         @endif
     </div>
 
