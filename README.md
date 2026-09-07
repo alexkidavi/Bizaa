@@ -265,7 +265,7 @@ MySQL, 97 tables. This is a grouped overview, not a full DDL dump — the author
 | `/ecommerce` | 8 | `EcommerceStoreController` | Store setup for businesses selling on `/marketplace` |
 | `/marketplace/*` | 3 | `MarketplaceController` | *Public.* Storefront browsing (no auth) |
 | `/roles`, `/permissions`, `/staff` | 6, 1, 5 | `RoleController`, `PermissionController`, `StaffController` | Role/permission management, staff-user accounts |
-| `/superadmin/businesses`, `/subscriptions`, `/plans` | 5, 4, 6 | `SuperAdmin\*` | Tenant management (list includes per-tenant setup/activity counts — units, categories, products, sales — and `/businesses/stats` for the platform-wide summary cards), subscription grants, plan catalog CRUD |
+| `/superadmin/businesses`, `/subscriptions`, `/plans` | 5, 4, 6 | `SuperAdmin\*` | Tenant management (list includes per-tenant setup/activity counts — units, categories, products, sales, last login by any of that business's users — and `/businesses/stats` for the platform-wide summary cards), subscription grants, plan catalog CRUD |
 | `/superadmin/stores`, `/reports`, `/settings`, `/dashboard` | 3, 1, 2, 1 | `SuperAdmin\*` | Marketplace moderation, platform reports, branding, overview |
 
 ---

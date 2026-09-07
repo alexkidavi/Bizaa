@@ -29,6 +29,7 @@ class User extends Authenticatable implements JWTSubject
         'business_id',
         'registered_by',
         'is_active',
+        'last_login_at',
         // 'is_superadmin',
     ];
 
@@ -52,6 +53,7 @@ class User extends Authenticatable implements JWTSubject
     {
         return [
             'email_verified_at' => 'datetime',
+            'last_login_at'     => 'datetime',
             'password'          => 'hashed',
             'is_active'         => 'boolean',
             'is_superadmin'     => 'boolean',

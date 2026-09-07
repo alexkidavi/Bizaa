@@ -42,6 +42,7 @@
               <th>Business</th>
               <th>Subscription</th>
               <th>Setup &amp; activity progress</th>
+              <th>Last login</th>
               <th>Joined</th>
               <th></th>
             </tr>
@@ -76,6 +77,11 @@
                     Sales {{ b.sales_count > 0 ? b.sales_count : "None yet" }}
                   </span>
                 </div>
+              </td>
+              <td>
+                <span :title="b.last_login_at ? new Date(b.last_login_at).toLocaleString() : ''">
+                  {{ formatLastLogin(b.last_login_at) }}
+                </span>
               </td>
               <td>{{ b.created_at }}</td>
               <td>
@@ -138,6 +144,24 @@ const fetchStats = async () => {
 const debouncedFetch = () => {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => fetchPage(1), 350);
+};
+
+// Relative time — scannable across a whole table ("3d ago") in a way an
+// absolute timestamp isn't; the full datetime is still available on hover
+// via the title attribute above.
+const formatLastLogin = (iso) => {
+  if (!iso) return "Never";
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
 };
 
 onMounted(() => {

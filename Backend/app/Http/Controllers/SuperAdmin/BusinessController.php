@@ -48,6 +48,15 @@ class BusinessController extends Controller
         $productCounts   = $this->countsByBusiness('products', $businessIds);
         $saleCounts      = $this->countsByBusiness('sales', $businessIds);
 
+        // Most recent login across every user of each business — not just
+        // the owner — so a business where only a cashier has signed in
+        // this week still reads as active, not dormant.
+        $lastLogins = User::whereIn('business_id', $businessIds)
+            ->whereNotNull('last_login_at')
+            ->select('business_id', DB::raw('MAX(last_login_at) as last_login_at'))
+            ->groupBy('business_id')
+            ->pluck('last_login_at', 'business_id');
+
         $data = $businesses->through(fn($b) => [
             'id'             => $b->id,
             'name'           => $b->business_name,
@@ -60,6 +69,7 @@ class BusinessController extends Controller
             'categories_count' => (int) ($categoryCounts[$b->id] ?? 0),
             'products_count'   => (int) ($productCounts[$b->id] ?? 0),
             'sales_count'      => (int) ($saleCounts[$b->id] ?? 0),
+            'last_login_at'    => isset($lastLogins[$b->id]) ? \Carbon\Carbon::parse($lastLogins[$b->id])->toIso8601String() : null,
             'subscription' => isset($activeSubs[$b->id]) ? [
                 'status'   => $activeSubs[$b->id]->status,
                 'ends_at'  => $activeSubs[$b->id]->ends_at?->format('Y-m-d'),
