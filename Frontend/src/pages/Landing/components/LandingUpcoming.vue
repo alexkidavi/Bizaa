@@ -1,7 +1,7 @@
 <template>
   <section class="section section--gradient" id="upcoming">
     <div class="container">
-      <div class="section-header">
+      <div class="section-header" v-reveal>
         <div class="upcoming-badge">
           <svg
             width="16"
@@ -25,7 +25,7 @@
 
       <div class="roadmap">
         <div class="roadmap-timeline">
-          <div class="timeline-line"></div>
+          <div class="timeline-line" v-reveal="{ type: 'line-x' }"></div>
           <div class="timeline-dot" style="--delay: 1"></div>
           <div class="timeline-dot" style="--delay: 2"></div>
           <div class="timeline-dot" style="--delay: 3"></div>
@@ -38,7 +38,7 @@
             :class="`roadmap-card--${item.phase}`"
             v-for="(item, idx) in upcoming"
             :key="item.title"
-            :style="{ '--delay': idx + 1 }"
+            v-reveal="{ type: 'zoom', delay: idx * 0.15 }"
           >
             <div class="roadmap-card__top">
               <div class="roadmap-card__icon"><component :is="item.icon" /></div>
@@ -123,7 +123,7 @@
         </div>
       </div>
 
-      <div class="early-access">
+      <div class="early-access" v-reveal>
         <div class="early-access__content">
           <div>
             <h3>Want early access?</h3>
@@ -148,6 +148,7 @@
 
 <script setup>
 import { mk } from "../utils/mk.js";
+import { vReveal } from "../utils/reveal.js";
 
 const BusinessManagerIcon = mk([
   [

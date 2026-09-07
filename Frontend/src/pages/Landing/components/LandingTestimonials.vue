@@ -1,12 +1,17 @@
 <template>
   <section class="section" id="testimonials">
     <div class="container">
-      <div class="section-header">
+      <div class="section-header" v-reveal>
         <p class="label">Testimonials</p>
         <h2>What our customers say</h2>
       </div>
       <div class="testi-grid">
-        <div class="testi" v-for="t in testimonials" :key="t.name">
+        <div
+          class="testi"
+          v-for="(t, i) in testimonials"
+          :key="t.name"
+          v-reveal="{ type: 'up', delay: i * 0.12 }"
+        >
           <svg class="testi__quote" width="34" height="26" viewBox="0 0 34 26" fill="none">
             <path
               d="M14.9 0 9.6 12.2H15v13.6H0V13.4L6.5 0h8.4Zm19 0-5.3 12.2H34v13.6H19V13.4L25.5 0h8.4Z"
@@ -33,6 +38,8 @@
 </template>
 
 <script setup>
+import { vReveal } from "../utils/reveal.js";
+
 const testimonials = [
   {
     body: "Bizaa replaced three tools we were juggling. Our cashiers love it and I finally get clean daily reports without chasing anyone.",

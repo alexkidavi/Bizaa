@@ -2,10 +2,15 @@
   <section class="section section--tinted" id="why">
     <div class="container why__inner">
       <div class="why__copy">
-        <p class="label">Why Bizaa</p>
-        <h2>Built for how East African businesses actually work</h2>
+        <p class="label" v-reveal>Why Bizaa</p>
+        <h2 v-reveal="{ delay: 0.08 }">Built for how East African businesses actually work</h2>
         <div class="why-list">
-          <div class="why-item" v-for="p in whyPoints" :key="p.title">
+          <div
+            class="why-item"
+            v-for="(p, i) in whyPoints"
+            :key="p.title"
+            v-reveal="{ type: 'right', delay: 0.16 + i * 0.1 }"
+          >
             <div class="why-item__icon"><component :is="p.icon" /></div>
             <div>
               <h4>{{ p.title }}</h4>
@@ -17,12 +22,13 @@
           to="/register"
           class="btn btn--primary btn--md"
           style="margin-top: 32px; color: white"
+          v-reveal="{ delay: 0.6 }"
         >
           Start free — no card needed
         </router-link>
       </div>
 
-      <div class="why__visual">
+      <div class="why__visual" v-reveal="{ type: 'left', delay: 0.1 }">
         <svg viewBox="0 0 400 360" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect
             x="0"
@@ -227,6 +233,7 @@
 
 <script setup>
 import { mk } from "../utils/mk.js";
+import { vReveal } from "../utils/reveal.js";
 
 const IconSpeed = mk([
   [

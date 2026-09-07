@@ -1,7 +1,7 @@
 <template>
   <section class="section app-section" id="app">
     <div class="container app__inner">
-      <div class="app__visual">
+      <div class="app__visual" v-reveal="{ type: 'left' }">
         <div class="phone-mockup">
           <div class="phone-screen">
             <div class="phone-header">
@@ -124,7 +124,7 @@
         </div>
       </div>
 
-      <div class="app__copy">
+      <div class="app__copy" v-reveal="{ type: 'right' }">
         <p class="label">Mobile App</p>
         <h2>Manage your business<br /><em>from your pocket</em></h2>
         <p>
@@ -183,6 +183,8 @@
 </template>
 
 <script setup>
+import { vReveal } from "../utils/reveal.js";
+
 const appFeatures = [
   "Full POS — sell, refund, view history",
   "Real-time stock levels & low-stock alerts",

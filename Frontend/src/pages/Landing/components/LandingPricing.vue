@@ -1,7 +1,7 @@
 <template>
   <section class="section section--tinted" id="pricing">
     <div class="container">
-      <div class="section-header">
+      <div class="section-header" v-reveal>
         <p class="label">Pricing</p>
         <h2>Transparent pricing</h2>
         <p class="sub">Start with a free 14-day trial. Pay only when you're ready. No hidden fees.</p>
@@ -20,9 +20,10 @@
       <div v-else class="plans">
         <div
           class="plan"
-          v-for="p in plans"
+          v-for="(p, i) in plans"
           :key="p.id"
           :class="{ 'plan--featured': p.popular }"
+          v-reveal="{ type: 'up', delay: i * 0.1 }"
         >
           <div v-if="p.popular" class="plan__badge">Most popular</div>
           <p class="plan__name">{{ p.name }}</p>
@@ -51,7 +52,7 @@
         </div>
       </div>
 
-      <p class="plans__trial-note">
+      <p class="plans__trial-note" v-reveal>
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
           <path d="M7 1.75a5.25 5.25 0 1 0 0 10.5A5.25 5.25 0 0 0 7 1.75zM7 4.5v3.25l2 1" stroke="#229de7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
@@ -64,6 +65,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
+import { vReveal } from "../utils/reveal.js";
 
 const rawPlans = ref([]);
 const plansLoading = ref(true);

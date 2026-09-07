@@ -12,6 +12,117 @@
   --bizaa-orange-dark: #d98c0f;
 }
 
+/* ── Scroll reveal (v-reveal, src/pages/Landing/utils/reveal.js) ───────
+   Element starts hidden + offset, transitions to visible every time it
+   scrolls into view and back to hidden every time it scrolls back out
+   (class toggled live by an IntersectionObserver, not a one-shot timer) —
+   same visual effect as the WOW.js/animate.css pattern used across most
+   animated marketing sites, built natively instead of pulling in jQuery. */
+.reveal {
+  opacity: 0;
+  will-change: opacity, transform;
+}
+/* Compound selectors (2+ classes) so this always beats a component's own
+   single-class `transition` shorthand (e.g. `.roadmap-card`, `.plan`,
+   `.testi`) regardless of source order — a plain `.reveal` rule here would
+   otherwise get its transition-property/duration/delay silently reset to
+   defaults whenever a later same-specificity rule redeclares `transition`
+   for unrelated properties (background/box-shadow on hover). */
+.reveal.reveal--up,
+.reveal.reveal--down,
+.reveal.reveal--zoom,
+.reveal.reveal--left,
+.reveal.reveal--right {
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Line/underline variants — same idea, tuned for a "drawing in" feel
+   (slightly slower, no easing overshoot) rather than a fade/slide. */
+.reveal.reveal--line-x,
+.reveal.reveal--line-y {
+  transition: opacity 0.5s ease, transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* The staggered per-item delay applies only while entering. Without this,
+   scrolling back UP past a staggered grid makes items fade out one by one
+   on a lag too, which reads as sluggish rather than intentional — everything
+   should retreat together, only the entrance should cascade. */
+.reveal.reveal--up.is-revealed,
+.reveal.reveal--down.is-revealed,
+.reveal.reveal--zoom.is-revealed,
+.reveal.reveal--left.is-revealed,
+.reveal.reveal--right.is-revealed,
+.reveal.reveal--line-x.is-revealed,
+.reveal.reveal--line-y.is-revealed {
+  transition-delay: var(--reveal-delay, 0s);
+}
+.reveal--up {
+  transform: translateY(30px);
+}
+.reveal--down {
+  transform: translateY(-24px);
+}
+.reveal--zoom {
+  transform: scale(0.92);
+}
+.reveal--left {
+  transform: translateX(-36px);
+}
+.reveal--right {
+  transform: translateX(36px);
+}
+/* Grow-in lines/dividers — origin defaults to centre (50% 50%), so these
+   draw outward from the middle rather than sliding across. */
+.reveal--line-x {
+  transform: scaleX(0);
+}
+.reveal--line-y {
+  transform: scaleY(0);
+}
+.reveal.is-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+/* Animated underline under any section eyebrow ("Features", "Pricing", …) —
+   a short accent bar that draws in left-to-right once the label (or an
+   ancestor carrying v-reveal, e.g. `.section-header`) scrolls into view,
+   and retracts on the way back out along with everything else. Fixed width
+   rather than 100%: `.label` is `display: block` in a couple of left-aligned
+   contexts (app/why copy blocks), where a percentage width would stretch
+   the bar across the whole column instead of tracking the short text. */
+.label {
+  position: relative;
+  display: inline-block;
+}
+.label::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 32px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--bizaa-blue), var(--bizaa-orange));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: 0.15s;
+}
+.is-revealed .label::after,
+.label.is-revealed::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+  .label::after {
+    transition: none;
+    transform: scaleX(1);
+  }
+}
+
 /* ── Base ─────────────────────────────────────────────── */
 .landing *,
 .landing *::before,
@@ -872,8 +983,15 @@
   right: 0;
   top: 80px;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(34, 157, 231, 0.3), rgba(34, 157, 231, 0.6), rgba(34, 157, 231, 0.3), transparent);
   pointer-events: none;
+}
+/* The bar itself lives on the (previously unstyled) .timeline-line child,
+   not .roadmap-timeline, so it can draw in independently via v-reveal
+   (type: line-x) once the roadmap scrolls into view. */
+.timeline-line {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(34, 157, 231, 0.3), rgba(34, 157, 231, 0.6), rgba(34, 157, 231, 0.3), transparent);
 }
 .timeline-dot {
   position: absolute;
@@ -905,16 +1023,13 @@
   border-radius: 24px;
   padding: 28px 20px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
   position: relative;
   overflow: hidden;
-  animation: fadeInUp 0.6s ease forwards;
-  opacity: 0;
-  animation-delay: calc(0.15s * var(--delay));
-}
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
+  /* Entrance itself now comes from .reveal (v-reveal in the template) so
+     it's scroll-triggered — this section sits below the fold, and the old
+     mount-time fadeInUp had always finished playing long before anyone
+     scrolled down far enough to see it. */
 }
 .roadmap-card:hover {
   transform: translateY(-4px);

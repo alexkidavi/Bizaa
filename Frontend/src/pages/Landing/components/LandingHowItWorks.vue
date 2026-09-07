@@ -1,13 +1,18 @@
 <template>
   <section class="section" id="how">
     <div class="container">
-      <div class="section-header">
+      <div class="section-header" v-reveal>
         <p class="label">How it works</p>
         <h2>Up and running in minutes</h2>
         <p class="sub">No IT team. No complex setup. Just sign up and start selling.</p>
       </div>
       <div class="steps">
-        <div class="step" v-for="(s, i) in steps" :key="i">
+        <div
+          class="step"
+          v-for="(s, i) in steps"
+          :key="i"
+          v-reveal="{ type: 'zoom', delay: i * 0.15 }"
+        >
           <div class="step__num">{{ String(i + 1).padStart(2, "0") }}</div>
           <div class="step__icon"><component :is="s.icon" /></div>
           <h3>{{ s.title }}</h3>
@@ -20,6 +25,7 @@
 
 <script setup>
 import { mk } from "../utils/mk.js";
+import { vReveal } from "../utils/reveal.js";
 
 const IconSetup = mk([
   ["path", { d: "M12 20h9", stroke: "currentColor", "stroke-width": 1.8, "stroke-linecap": "round" }],

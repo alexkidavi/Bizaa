@@ -1,13 +1,18 @@
 <template>
   <section class="section" id="features">
     <div class="container">
-      <div class="section-header">
+      <div class="section-header" v-reveal>
         <p class="label">Features</p>
         <h2>Everything in one place</h2>
         <p class="sub">No integrations to manage, no tab-switching. Bizaa handles the full operation.</p>
       </div>
       <div class="features-grid">
-        <div class="feat-card" v-for="f in features" :key="f.title">
+        <div
+          class="feat-card"
+          v-for="(f, i) in features"
+          :key="f.title"
+          v-reveal="{ type: 'zoom', delay: (i % 3) * 0.12 }"
+        >
           <div class="feat-icon"><component :is="f.icon" /></div>
           <h3>{{ f.title }}</h3>
           <p>{{ f.desc }}</p>
@@ -19,6 +24,7 @@
 
 <script setup>
 import { mk } from "../utils/mk.js";
+import { vReveal } from "../utils/reveal.js";
 
 const IconPOS = mk([
   ["rect", { x: 2, y: 3, width: 20, height: 14, rx: 3, stroke: "currentColor", "stroke-width": 1.8 }],
