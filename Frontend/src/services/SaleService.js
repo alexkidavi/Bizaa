@@ -31,4 +31,10 @@ getPayments(id) {
 recordPayment(id, data) {
   return axios.post(`${API_URL}/${id}/record-payment`, data);
 },
+// `id` here is the sale's plain numeric id (sale.id from getById's
+// response), not the encrypted route id getById() itself takes — see
+// SaleController::loadSaleForReceipt on the backend.
+emailReceipt(id, email) {
+  return axios.post(`${API_URL}/${id}/email-receipt`, email ? { email } : {});
+},
 };

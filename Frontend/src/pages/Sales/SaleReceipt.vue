@@ -16,6 +16,12 @@
           Back
         </button>
         <div class="ctrl-right">
+          <button @click="handleEmail" :disabled="sending" class="btn-email">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            {{ sending ? "Sending…" : "Email Receipt" }}
+          </button>
           <button @click="handlePrint" class="btn-print">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
@@ -166,6 +172,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import QRCode from "qrcode";
+import Swal from "sweetalert2";
 import SalesService from "@/services/SaleService";
 import { useAuthStore } from "@/stores/auth";
 
@@ -235,6 +242,46 @@ const itemTotal = (item) => {
 /* ── Print ──────────────────────────── */
 const handlePrint = () => window.print();
 
+/* ── Email ──────────────────────────── */
+const sending = ref(false);
+
+const handleEmail = async () => {
+  const { value: email, isConfirmed } = await Swal.fire({
+    icon: "question",
+    title: "Email this receipt",
+    input: "email",
+    inputValue: sale.value?.customer?.email || "",
+    inputPlaceholder: "customer@example.com",
+    confirmButtonText: "Send",
+    confirmButtonColor: "#229DE7",
+    showCancelButton: true,
+    inputValidator: (value) => (!value ? "Enter an email address to send to." : undefined),
+  });
+
+  if (!isConfirmed || !email) return;
+
+  sending.value = true;
+  try {
+    const res = await SalesService.emailReceipt(sale.value.id, email);
+    Swal.fire({
+      icon: "success",
+      title: "Receipt sent",
+      text: res?.data?.message || `Receipt is being sent to ${email}.`,
+      confirmButtonColor: "#229DE7",
+    });
+  } catch (err) {
+    console.error(err);
+    Swal.fire({
+      icon: "error",
+      title: "Could not send receipt",
+      text: err?.response?.data?.message || "Something went wrong. Please try again.",
+      confirmButtonColor: "#229DE7",
+    });
+  } finally {
+    sending.value = false;
+  }
+};
+
 /* ── Fetch ──────────────────────────── */
 onMounted(async () => {
   try {
@@ -287,6 +334,11 @@ onMounted(async () => {
   cursor: pointer;
   padding: 0;
 }
+.ctrl-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .btn-print {
   display: inline-flex;
   align-items: center;
@@ -302,6 +354,22 @@ onMounted(async () => {
   transition: background 0.15s;
 }
 .btn-print:hover { background: #1682C4; }
+.btn-email {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #229DE7;
+  background: #fff;
+  border: 1.5px solid #229DE7;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-email:hover { background: #eaf5fd; }
+.btn-email:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* Receipt card */
 .receipt-card {
