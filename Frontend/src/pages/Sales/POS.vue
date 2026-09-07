@@ -584,6 +584,11 @@ const processPayment = async (mpesaMeta = null) => {
             selectedPayment.value
           ] || "Cash",
       customer: selectedCustomer.value?.name || null,
+      customerEmail: selectedCustomer.value?.email || null,
+      // Plain sale id for /sales/{id}/email-receipt — only set once the sale
+      // has actually reached the server (queueOffline() never passes one in,
+      // since an offline sale has no server-side id yet to email against).
+      id: createdSale.id || null,
       // eTIMS QR: present for online sales once DigiTax responds; an offline
       // sale has no KRA URL until it's synced, so the receipt prints without
       // the QR (KRA permits this for offline transactions).
@@ -691,13 +696,50 @@ const closeReceipt = () => {
   newOrder();
   if (hasActiveQuery.value) fetchProducts();
 };
-const emailReceipt = () =>
-  Swal.fire({
-    icon: "info",
-    title: "Email Receipt",
-    text: "Coming soon.",
+const emailReceipt = async () => {
+  if (receiptData.value?.pendingSync || !receiptData.value?.id) {
+    Swal.fire({
+      icon: "info",
+      title: "Not synced yet",
+      text: "This sale was made offline and hasn't reached the server yet — try emailing the receipt again once you're back online.",
+      confirmButtonColor: "#229DE7",
+    });
+    return;
+  }
+
+  const { value: email, isConfirmed } = await Swal.fire({
+    icon: "question",
+    title: "Email this receipt",
+    input: "email",
+    inputValue: receiptData.value?.customerEmail || "",
+    inputPlaceholder: "customer@example.com",
+    confirmButtonText: "Send",
     confirmButtonColor: "#229DE7",
+    showCancelButton: true,
+    inputValidator: (value) => (!value ? "Enter an email address to send to." : undefined),
   });
+
+  if (!isConfirmed || !email) return;
+
+  try {
+    const res = await SalesService.emailReceipt(receiptData.value.id, email);
+    Swal.fire({
+      icon: "success",
+      title: "Receipt sent",
+      text: res?.data?.message || `Receipt is being sent to ${email}.`,
+      confirmButtonColor: "#229DE7",
+      timer: 2200,
+      showConfirmButton: false,
+    });
+  } catch (err) {
+    Swal.fire({
+      icon: "error",
+      title: "Could not send receipt",
+      text: err?.response?.data?.message || "Something went wrong. Please try again.",
+      confirmButtonColor: "#229DE7",
+    });
+  }
+};
 const posModalsRef = ref(null);
 const printReceipt = () => posModalsRef.value?.printReceipt();
 const printQuote = () => window.print();
