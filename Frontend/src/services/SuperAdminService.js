@@ -18,6 +18,7 @@ export default {
 
   // Businesses
   getBusinesses: (params = {})      => api.get("/businesses", { params }).then(r => r.data),
+  getBusinessStats: ()              => api.get("/businesses/stats").then(r => r.data),
   getBusiness:   (id)               => api.get(`/businesses/${id}`).then(r => r.data),
   suspendBusiness:  (id)            => api.post(`/businesses/${id}/suspend`).then(r => r.data),
   reinstateBusiness:(id)            => api.post(`/businesses/${id}/reinstate`).then(r => r.data),

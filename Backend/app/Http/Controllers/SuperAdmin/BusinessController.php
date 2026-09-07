@@ -5,6 +5,8 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\BusinessSubscription;
+use App\Models\Product;
+use App\Models\Sale;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,23 +37,29 @@ class BusinessController extends Controller
             ->get()
             ->keyBy('business_id');
 
-        // User counts per business
-        $userCounts = User::whereIn('business_id', $businessIds)
-            ->where('is_superadmin', false)
-            ->select('business_id', DB::raw('count(*) as total'))
-            ->groupBy('business_id')
-            ->pluck('total', 'business_id');
+        // Onboarding/activity progress — same four "did they actually set
+        // up shop" checks DashboardRepository::getOnboardingStatus() uses
+        // for the business's own dashboard checklist, batch-counted here
+        // (one grouped query per resource, not per-row) so super-admin
+        // can see setup progress and real usage across every tenant at a
+        // glance, not just whether their subscription is current.
+        $unitCounts      = $this->countsByBusiness('units', $businessIds);
+        $categoryCounts  = $this->countsByBusiness('categories', $businessIds);
+        $productCounts   = $this->countsByBusiness('products', $businessIds);
+        $saleCounts      = $this->countsByBusiness('sales', $businessIds);
 
         $data = $businesses->through(fn($b) => [
-            'id'           => $b->id,
-            'name'         => $b->business_name,
-            'email'        => $b->business_email,
-            'phone'        => $b->business_phone,
-            'industry'     => $b->business_industry,
-            'location'     => $b->business_location,
-            'code'         => $b->business_code,
-            'created_at'   => $b->created_at?->format('Y-m-d'),
-            'user_count'   => $userCounts[$b->id] ?? 0,
+            'id'             => $b->id,
+            'name'           => $b->business_name,
+            'email'          => $b->business_email,
+            'phone'          => $b->business_phone,
+            'location'       => $b->business_location,
+            'code'           => $b->business_code,
+            'created_at'     => $b->created_at?->format('Y-m-d'),
+            'units_count'      => (int) ($unitCounts[$b->id] ?? 0),
+            'categories_count' => (int) ($categoryCounts[$b->id] ?? 0),
+            'products_count'   => (int) ($productCounts[$b->id] ?? 0),
+            'sales_count'      => (int) ($saleCounts[$b->id] ?? 0),
             'subscription' => isset($activeSubs[$b->id]) ? [
                 'status'   => $activeSubs[$b->id]->status,
                 'ends_at'  => $activeSubs[$b->id]->ends_at?->format('Y-m-d'),
@@ -60,6 +68,49 @@ class BusinessController extends Controller
         ]);
 
         return response()->json($data);
+    }
+
+    // Platform-wide summary cards for the top of the Businesses page.
+    public function stats(): JsonResponse
+    {
+        // A business counts as "active" if its most recent subscription is
+        // currently in force; "expired" means it has subscription history
+        // but no currently-active row — mirrors BusinessSubscription::isActive().
+        // A business that has never subscribed at all is neither (matches
+        // the "No subscription" badge already shown in the table, which is
+        // its own distinct state from "used to be subscribed, now isn't").
+        $activeBusinessIds = BusinessSubscription::whereIn('status', ['trial', 'active'])
+            ->where('ends_at', '>', now())
+            ->distinct()
+            ->pluck('business_id');
+
+        $expiredBusinessCount = BusinessSubscription::whereNotIn('business_id', $activeBusinessIds)
+            ->distinct('business_id')
+            ->count('business_id');
+
+        return response()->json([
+            'total_businesses'     => Business::count(),
+            'active_subscriptions' => $activeBusinessIds->count(),
+            'expired_subscriptions'=> $expiredBusinessCount,
+            'products_uploaded'    => Product::count(),
+            'sales_made'           => Sale::count(),
+        ]);
+    }
+
+    // Raw DB::table() (not the Eloquent model) so this stays one grouped
+    // query regardless of which table — but that means Laravel's SoftDeletes
+    // global scope doesn't apply automatically, and every one of these
+    // tables (units, categories, products, sales) uses it — excluded here
+    // by hand, or a voided sale / deleted product would still count as
+    // "activity".
+    private function countsByBusiness(string $table, $businessIds)
+    {
+        return DB::table($table)
+            ->whereIn('business_id', $businessIds)
+            ->whereNull('deleted_at')
+            ->select('business_id', DB::raw('count(*) as total'))
+            ->groupBy('business_id')
+            ->pluck('total', 'business_id');
     }
 
     public function show(int $id): JsonResponse

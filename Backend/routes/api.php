@@ -896,6 +896,7 @@ Route::prefix('superadmin')->middleware(['auth:api', 'superadmin'])->group(funct
 
     // Business management
     Route::get('/businesses',             [SuperAdminBusiness::class, 'index']);
+    Route::get('/businesses/stats',       [SuperAdminBusiness::class, 'stats']);
     Route::get('/businesses/{id}',        [SuperAdminBusiness::class, 'show']);
     Route::post('/businesses/{id}/suspend',   [SuperAdminBusiness::class, 'suspend']);
     Route::post('/businesses/{id}/reinstate', [SuperAdminBusiness::class, 'reinstate']);
