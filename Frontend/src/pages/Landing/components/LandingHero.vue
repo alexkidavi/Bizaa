@@ -20,8 +20,8 @@
             style="color: white"
             >Start for free</router-link
           >
-          <a @click.prevent="scrollTo('how')" class="btn btn--text btn--lg">
-            See how it works
+          <router-link :to="{ path: '/login', query: { demo: '1' } }" class="btn btn--text btn--lg">
+            Try Demo
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path
                 d="M2 7h10M7 2l5 5-5 5"
@@ -31,7 +31,7 @@
                 stroke-linejoin="round"
               />
             </svg>
-          </a>
+          </router-link>
         </div>
 
         <div class="hero__meta">
@@ -75,10 +75,3 @@
     </div>
   </section>
 </template>
-
-<script setup>
-function scrollTo(id) {
-  const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: "smooth" });
-}
-</script>

@@ -209,7 +209,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import LoginService from "@/services/loginService";
 import { EyeIcon, EyeOffIcon } from "lucide-vue-next";
@@ -222,6 +222,7 @@ const successMessage = ref("");
 const passwordVisible = ref(false);
 
 const router = useRouter();
+const route = useRoute();
 const auth = useAuthStore();
 
 // Offline + a still-cached session that can run the POS: the login form is
@@ -238,7 +239,13 @@ const canResumeOffline = computed(
 );
 const resumeOffline = () => router.push("/sales/pos");
 
+// Landing page's hero "Try Demo" link lands here with ?demo=1 instead of
+// duplicating the demo-login flow on the landing page itself.
 onMounted(() => {
+  if (route.query.demo === "1" && navigator.onLine) {
+    demoLogin();
+    return;
+  }
   if (!navigator.onLine && auth.token && auth.hasPermission("sales.create")) {
     resumeOffline();
   }
