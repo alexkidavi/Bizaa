@@ -177,19 +177,23 @@ const docFrame = ref(null);
 
 // ── Business info from auth store ──
 const BASE_URL = import.meta.env.VITE_APP_URL ?? "";
+// Business model's actual fields are all "business_"-prefixed (business_name,
+// business_logo, etc.) — this used to read the un-prefixed names, which don't
+// exist on the model, so the logo (and every other business field here)
+// silently rendered blank/default on every invoice document.
 const resolvedLogo = (() => {
-  const raw = (auth.user?.business?.logo ?? "").trim();
+  const raw = (auth.user?.business?.business_logo ?? "").trim();
   if (!raw) return null;
   return /^(https?:\/\/|data:)/i.test(raw) ? raw : `${BASE_URL}/storage/${raw}`;
 })();
 
 const business = {
-  name: auth.user?.business?.name || "Bizaa",
-  tagline: auth.user?.business?.industry || "Quality · Reliability · Excellence",
-  address: auth.user?.business?.location || "",
-  phone: auth.user?.business?.phone || "",
-  email: auth.user?.business?.email || "",
-  website: auth.user?.business?.website || "",
+  name: auth.user?.business?.business_name || "Bizaa",
+  tagline: auth.user?.business?.business_industry || "Quality · Reliability · Excellence",
+  address: auth.user?.business?.business_location || "",
+  phone: auth.user?.business?.business_phone || "",
+  email: auth.user?.business?.business_email || "",
+  website: auth.user?.business?.business_website || "",
   logo: resolvedLogo,
 };
 

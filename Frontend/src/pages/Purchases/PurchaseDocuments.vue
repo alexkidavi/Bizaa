@@ -207,17 +207,21 @@ const activeDoc = ref("grn");
 
 const BASE_URL = import.meta.env.VITE_APP_URL ?? "";
 
+// Business model's actual fields are all "business_"-prefixed (business_name,
+// business_logo, etc.) — this used to read the un-prefixed names, which don't
+// exist on the model, so the logo (and every other business field here)
+// silently rendered blank/default on every purchase document.
 const resolvedLogo = (() => {
-  const raw = (auth.user?.business?.logo ?? "").trim();
+  const raw = (auth.user?.business?.business_logo ?? "").trim();
   if (!raw) return null;
   return /^(https?:\/\/|data:)/i.test(raw) ? raw : `${BASE_URL}/storage/${raw}`;
 })();
 
 const business = ref({
-  name: auth.user?.business?.name || "Bizaa",
-  address: auth.user?.business?.location || "",
-  phone: auth.user?.business?.phone || "",
-  email: auth.user?.business?.email || "",
+  name: auth.user?.business?.business_name || "Bizaa",
+  address: auth.user?.business?.business_location || "",
+  phone: auth.user?.business?.business_phone || "",
+  email: auth.user?.business?.business_email || "",
   logo: resolvedLogo,
 });
 const docTypes = [
