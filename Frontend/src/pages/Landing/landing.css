@@ -356,48 +356,142 @@
   color: #111827;
 }
 
-/* Dashboard frame */
-.dash-frame {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 20px 48px -12px rgba(0, 0, 0, 0.1);
+/* Hero photo + floating badges */
+.hero-photo {
+  position: relative;
 }
-.dash-titlebar {
+.hero-photo__img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 24px 56px -16px rgba(17, 24, 39, 0.18);
+}
+.hero-badge {
+  position: absolute;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
+  background: #fff;
+  border-radius: 12px;
   padding: 10px 14px;
-  background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 8px 24px -6px rgba(17, 24, 39, 0.18);
+  opacity: 0;
 }
-.dash-dots {
-  display: flex;
-  gap: 5px;
+.hero-badge--sale {
+  top: -18px;
+  right: 24px;
+  animation: badgePop 0.5s 1.1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+    floatY 4.5s 1.7s ease-in-out infinite;
 }
-.dd {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-}
-.dd--r {
-  background: #ef4444;
-}
-.dd--y {
-  background: #f59e0b;
-}
-.dd--g {
-  background: #22c55e;
-}
-.dash-url {
-  font-size: 11px;
-  color: #9ca3af;
-  font-family: monospace;
-}
-.dash-svg {
-  width: 100%;
+.hero-badge--sale strong {
   display: block;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.3;
+}
+.hero-badge--sale span {
+  font-size: 11.5px;
+  color: #16a34a;
+  font-weight: 700;
+}
+.hero-badge__icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #16a34a;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hero-badge--sync {
+  bottom: -16px;
+  left: 24px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+  animation: badgePop 0.5s 1.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+    floatY 5s 1.9s ease-in-out infinite;
+}
+.hero-badge__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #229de7;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(34, 157, 231, 0.18);
+}
+
+@keyframes badgePop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes floatY {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* Hero entrance animation — text staggers in first, image follows from
+   the right. Respects reduced-motion (see the media query at the end of
+   this file) rather than forcing it on everyone. */
+@keyframes heroFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes heroFadeRight {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.hero__text h1,
+.hero__text > p,
+.hero__ctas,
+.hero__meta {
+  opacity: 0;
+  animation: heroFadeUp 0.7s ease-out forwards;
+}
+.hero__text h1 {
+  animation-delay: 0.05s;
+}
+.hero__text > p {
+  animation-delay: 0.18s;
+}
+.hero__ctas {
+  animation-delay: 0.3s;
+}
+.hero__meta {
+  animation-delay: 0.42s;
+}
+.hero__visual {
+  opacity: 0;
+  animation: heroFadeRight 0.8s 0.3s ease-out forwards;
 }
 
 /* ── STAT BAR ────────────────────────────────────────── */
@@ -1695,5 +1789,18 @@
   }
   .footer__legal {
     justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__text h1,
+  .hero__text > p,
+  .hero__ctas,
+  .hero__meta,
+  .hero__visual,
+  .hero-badge {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
