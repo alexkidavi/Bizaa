@@ -242,7 +242,7 @@ MySQL, 97 tables. This is a grouped overview, not a full DDL dump — the author
 | `/customers`, `/suppliers` | 8, 7 | `CustomerController`, `SupplierController` | Contact CRUD, `/customers/pos-search` (paginated, for POS at scale) |
 | `/products`, `/categories`, `/brands`, `/units` | 8, 4, 4, 4 | `ProductController` + lookups | Catalog CRUD, product search |
 | `/stocks` | 10 | `StockController` | Stock take, adjustment, branch-to-branch transfer, stock history |
-| `/sales` | 6 | `SaleController`, `DigitaxController` | POS sale creation, sale-level payments, eTIMS submission |
+| `/sales` | 8 | `SaleController`, `DigitaxController` | POS sale creation, sale-level payments, eTIMS submission, `{id}/receipt-pdf` + `{id}/email-receipt` (shared by the web POS's Email Receipt button and the mobile app's print/send) |
 | `/pos` | 2 | `PosController` | *Offline POS.* `GET /pos/offline-bootstrap?branch_id=` returns the per-branch snapshot the installed PWA caches (catalogue, stock, prices, categories, branches, recent customers, receipt header); `GET /pos/ping` is the reachability/auth probe the POS polls to recover from offline on its own |
 | `/purchases` | 8 | `PurchaseController` | Purchase orders + payments |
 | `/quotations`, `/invoices` | 5, 5 | `QuotationController`, `InvoiceController` | Quote → sale conversion, invoicing |
