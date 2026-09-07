@@ -74,6 +74,41 @@
                         </td>
                     </tr>
 
+                    <!-- Setup steps -->
+                    <tr>
+                        <td style="padding: 16px 32px 8px 32px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                                   style="background-color: #FFFBF3; border: 1px solid #FBEACB; border-radius: 12px;">
+                                <tr>
+                                    <td style="padding: 20px 24px;">
+                                        <p style="margin: 0 0 14px 0; font-size: 12px; font-weight: 700; color: #D98C0F; text-transform: uppercase; letter-spacing: 0.06em;">
+                                            Get set up in 5 steps
+                                        </p>
+                                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                            @foreach ([
+                                                'Complete your business profile' => 'Add your logo, location and tax details under Settings → Business.',
+                                                'Add your branch(es)' => 'Running more than one location? Set them up so stock and sales stay separate per branch.',
+                                                'Set up categories & units' => 'Create the product categories and units (pcs, kg, litre…) you sell in.',
+                                                'Add your products' => 'Add products one by one, or import your whole catalogue at once via CSV.',
+                                                'Invite your staff' => 'Add your cashiers and managers, and give each one only the access they need.',
+                                            ] as $title => $desc)
+                                                <tr>
+                                                    <td width="28" valign="top" style="padding: 6px 0;">
+                                                        <span style="display: inline-block; width: 20px; height: 20px; border-radius: 50%; background-color: #F5A623; color: #ffffff; font-size: 11px; font-weight: 800; text-align: center; line-height: 20px;">{{ $loop->iteration }}</span>
+                                                    </td>
+                                                    <td style="padding: 6px 0 6px 8px;">
+                                                        <p style="margin: 0; font-size: 13.5px; font-weight: 700; color: #1e293b;">{{ $title }}</p>
+                                                        <p style="margin: 2px 0 0 0; font-size: 12.5px; color: #64748b; line-height: 1.5;">{{ $desc }}</p>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
                     <!-- CTA -->
                     <tr>
                         <td align="center" style="padding: 28px 32px;">
