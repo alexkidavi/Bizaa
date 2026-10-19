@@ -1,70 +1,151 @@
 <?php
-
 namespace App\Console\Commands;
 
+use App\Mail\DatabaseBackupMail;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Mail;
+use RuntimeException;
+use Throwable;
 
 class BackupDatabase extends Command
 {
-
-
     protected $signature = 'backup:daily';
-    protected $description = 'Run a custom daily database backup';
 
-    public function handle()
+    protected $description = 'Back up the database and email the SQL file';
+
+    public function handle(): int
     {
-        $this->info('['.now().'] Starting custom backup...');
+        $this->info('[' . now() . '] Starting database backup...');
+
+        $backupPath = storage_path('app/backups');
+        $optionFile = null;
+        $backupFile = null;
 
         try {
-            // Database connection info from .env
-            $dbHost = env('DB_HOST', '127.0.0.1');
-            $dbPort = env('DB_PORT', '3306');
-            $dbName = env('DB_DATABASE');
-            $dbUser = env('DB_USERNAME');
-            $dbPass = env('DB_PASSWORD');
+            $dbHost = config('database.connections.mysql.host');
+            $dbPort = config('database.connections.mysql.port', 3306);
+            $dbName = config('database.connections.mysql.database');
+            $dbUser = config('database.connections.mysql.username');
+            $dbPass = config('database.connections.mysql.password');
 
-            // Backup folder
-            $backupPath = storage_path('app/backups');
-            if (!file_exists($backupPath)) {
-                mkdir($backupPath, 0755, true);
+            $recipient = env(
+                'DB_BACKUP_EMAIL',
+                'georgemuemah@gmail.com'
+            );
+
+            if (!$dbHost || !$dbName || !$dbUser) {
+                throw new RuntimeException(
+                    'Database configuration is incomplete.'
+                );
             }
 
-            // File name
-            $fileName = 'backup-' . date('Y-m-d_H-i-s') . '.sql';
+            if (!filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+                throw new RuntimeException(
+                    'The backup recipient email is invalid.'
+                );
+            }
 
-            // Credentials go in a temporary MySQL option file rather than
-            // directly on the command line — a shell command's arguments
-            // (including any password interpolated into it) are visible to
-            // every other user on the box via `ps aux` for as long as
-            // mysqldump runs. The option file is created 0600 (owner-only)
-            // and removed immediately after, win or lose.
-            $optionFile = tempnam(sys_get_temp_dir(), 'bizaa_backup_');
-            file_put_contents(
-                $optionFile,
-                "[client]\nuser={$dbUser}\npassword={$dbPass}\nhost={$dbHost}\nport={$dbPort}\n"
-            );
+            if (!is_dir($backupPath) &&
+                !mkdir($backupPath, 0750, true) &&
+                !is_dir($backupPath)) {
+                throw new RuntimeException(
+                    'Could not create the backup directory.'
+                );
+            }
+
+            $fileName = 'backup-' . now()->format('Y-m-d_H-i-s') . '.sql';
+            $backupFile = $backupPath . DIRECTORY_SEPARATOR . $fileName;
+
+            $optionFile = tempnam(sys_get_temp_dir(), 'db_backup_');
+
+            if ($optionFile === false) {
+                throw new RuntimeException(
+                    'Could not create the temporary MySQL option file.'
+                );
+            }
+
             chmod($optionFile, 0600);
 
-            $command = 'mysqldump --defaults-extra-file=' . escapeshellarg($optionFile)
-                . ' ' . escapeshellarg($dbName)
-                . ' > ' . escapeshellarg($backupPath . '/' . $fileName);
+            $optionContents =
+                "[client]\n" .
+                'host=' . $this->mysqlOption($dbHost) . "\n" .
+                'port=' . (int) $dbPort . "\n" .
+                'user=' . $this->mysqlOption($dbUser) . "\n" .
+                'password=' . $this->mysqlOption($dbPass ?? '') . "\n";
 
-            exec($command, $output, $returnVar);
-
-            unlink($optionFile);
-
-            if ($returnVar !== 0) {
-                $this->error('['.now().'] Backup failed! Check MySQL credentials and permissions.');
-                return 1;
+            if (file_put_contents($optionFile, $optionContents) === false) {
+                throw new RuntimeException(
+                    'Could not write the MySQL option file.'
+                );
             }
 
-            $this->info('['.now().'] Backup completed: '.$backupPath.'/'.$fileName);
+            $command = 'mysqldump'
+                . ' --defaults-extra-file=' . escapeshellarg($optionFile)
+                . ' --single-transaction'
+                . ' --quick'
+                . ' --routines'
+                . ' --triggers'
+                . ' --events'
+                . ' --no-tablespaces'
+                . ' ' . escapeshellarg($dbName)
+                . ' > ' . escapeshellarg($backupFile)
+                . ' 2>&1';
 
-        } catch (\Exception $e) {
-            $this->error('['.now().'] Backup failed: '.$e->getMessage());
-            return 1;
+            exec($command, $output, $exitCode);
+
+            @unlink($optionFile);
+            $optionFile = null;
+
+            if ($exitCode !== 0 ||
+                !is_file($backupFile) ||
+                filesize($backupFile) === 0) {
+                throw new RuntimeException(
+                    'Database dump failed: ' . implode("\n", $output)
+                );
+            }
+
+            $this->info('Backup created: ' . $backupFile);
+            $this->info('Sending backup email to ' . $recipient . '...');
+
+            Mail::to($recipient)->send(
+                new DatabaseBackupMail($backupFile, $fileName)
+            );
+
+            $this->info('Backup email sent successfully.');
+
+            // Remove local copy only after the email sends successfully.
+            if (!unlink($backupFile)) {
+                $this->warn(
+                    'Email sent, but the local backup could not be deleted.'
+                );
+            }
+
+            $backupFile = null;
+
+            return self::SUCCESS;
+
+        } catch (Throwable $e) {
+            report($e);
+
+            $this->error(
+                '[' . now() . '] Backup failed: ' . $e->getMessage()
+            );
+
+            return self::FAILURE;
+
+        } finally {
+            if ($optionFile && is_file($optionFile)) {
+                @unlink($optionFile);
+            }
         }
+    }
 
-        return 0;
+    private function mysqlOption(string $value): string
+    {
+        return '"' . str_replace(
+            ['\\', '"', "\n", "\r"],
+            ['\\\\', '\\"', '\\n', '\\r'],
+            $value
+        ) . '"';
     }
 }
