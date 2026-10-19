@@ -24,12 +24,12 @@ class DatabaseBackupMail extends Mailable
         );
     }
 
-    public function content(): Content
-    {
-        return new Content(
-            text: 'emails.database-backup'
-        );
-    }
+   public function content(): Content
+{
+    return new Content(
+        view: 'emails.database-backup'
+    );
+}
 
     public function attachments(): array
     {
