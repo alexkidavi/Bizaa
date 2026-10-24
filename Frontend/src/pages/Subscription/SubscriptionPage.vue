@@ -67,12 +67,9 @@
           <div v-if="current.is_active" class="flex-shrink-0">
             <div class="relative w-20 h-20">
               <svg class="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
-                <circle cx="40" cy="40" r="34" fill="none" stroke="#EFF6FF" stroke-width="8"/>
-                <circle cx="40" cy="40" r="34" fill="none" stroke="#229DE7" stroke-width="8"
-                  stroke-linecap="round"
-                  :stroke-dasharray="`${daysPercent * 213.6} 213.6`"
-                  style="transition: stroke-dasharray 1s ease"
-                />
+                <circle cx="40" cy="40" r="34" fill="none" stroke="#EFF6FF" stroke-width="8" />
+                <circle cx="40" cy="40" r="34" fill="none" stroke="#229DE7" stroke-width="8" stroke-linecap="round"
+                  :stroke-dasharray="`${daysPercent * 213.6} 213.6`" style="transition: stroke-dasharray 1s ease" />
               </svg>
               <div class="absolute inset-0 flex flex-col items-center justify-center">
                 <span class="text-xl font-extrabold text-slate-900 leading-none">{{ current.days_remaining }}</span>
@@ -112,12 +109,10 @@
       </div>
 
       <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div v-for="plan in plans" :key="plan.id"
-          :class="[
-            'relative bg-white rounded-2xl border-2 p-6 flex flex-col transition-all duration-200 hover:shadow-md',
-            plan.slug === 'quarterly' ? 'border-[#229DE7] shadow-md' : 'border-slate-200',
-          ]"
-        >
+        <div v-for="plan in plans" :key="plan.id" :class="[
+          'relative bg-white rounded-2xl border-2 p-6 flex flex-col transition-all duration-200 hover:shadow-md',
+          plan.slug === 'quarterly' ? 'border-[#229DE7] shadow-md' : 'border-slate-200',
+        ]">
           <!-- Popular badge -->
           <div v-if="plan.slug === 'quarterly'"
             class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#229DE7] text-white text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap">
@@ -126,14 +121,18 @@
 
           <!-- Plan name & price -->
           <div class="mb-4">
-            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{{ periodLabel(plan.billing_period) }}</p>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{{
+              periodLabel(plan.billing_period) }}</p>
             <h3 class="text-xl font-extrabold text-slate-900">{{ plan.name }}</h3>
             <div class="flex items-end gap-1 mt-2">
               <span class="text-3xl font-extrabold text-slate-900">KES {{ fmtPrice(plan.price) }}</span>
-              <span class="text-sm text-slate-400 mb-1">/ {{ plan.billing_period === 'annually' ? 'year' : plan.billing_period === 'quarterly' ? 'quarter' : 'month' }}</span>
+              <span class="text-sm text-slate-400 mb-1">/ {{ plan.billing_period === 'annually' ? 'year' :
+                plan.billing_period === 'quarterly' ? 'quarter' : 'month' }}</span>
             </div>
-            <p v-if="plan.slug === 'quarterly'" class="text-xs text-emerald-600 font-semibold mt-1">Save KES 100 vs monthly</p>
-            <p v-if="plan.slug === 'annually'" class="text-xs text-emerald-600 font-semibold mt-1">Save KES 1,000 vs monthly</p>
+            <p v-if="plan.slug === 'quarterly'" class="text-xs text-emerald-600 font-semibold mt-1">Save KES 100 vs
+              monthly</p>
+            <p v-if="plan.slug === 'annually'" class="text-xs text-emerald-600 font-semibold mt-1">Save KES 1,000 vs
+              monthly</p>
           </div>
 
           <!-- Features -->
@@ -150,15 +149,12 @@
               <DevicePhoneMobileIcon class="w-3.5 h-3.5" />
               <span>Pay via M-Pesa</span>
             </div>
-            <button
-              @click="openModal(plan)"
-              :class="[
-                'w-full py-2.5 rounded-xl font-bold text-sm transition-all',
-                plan.slug === 'quarterly'
-                  ? 'bg-[#229DE7] text-white hover:bg-[#1b85c8]'
-                  : 'bg-slate-900 text-white hover:bg-slate-700',
-              ]"
-            >
+            <button @click="openModal(plan)" :class="[
+              'w-full py-2.5 rounded-xl font-bold text-sm transition-all',
+              plan.slug === 'quarterly'
+                ? 'bg-[#229DE7] text-white hover:bg-[#1b85c8]'
+                : 'bg-slate-900 text-white hover:bg-slate-700',
+            ]">
               Subscribe — KES {{ fmtPrice(plan.price) }}
             </button>
           </div>
@@ -172,8 +168,7 @@
 
       <div v-if="loadingHistory" class="bg-white rounded-2xl border border-slate-200 h-32 animate-pulse" />
 
-      <div v-else-if="history.length === 0"
-        class="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+      <div v-else-if="history.length === 0" class="bg-white rounded-2xl border border-slate-200 p-8 text-center">
         <p class="text-sm text-slate-400">No billing history yet.</p>
       </div>
 
@@ -208,103 +203,77 @@
     ══════════════════════════════════════════════════ -->
     <Teleport to="body">
       <div v-if="modal.open"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" @click.stop>
+        class="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div
+          class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden my-auto"
+          @click.stop>
 
-          <!-- ── STEP 1: Phone input ── -->
+          <!-- STEP 1: Offline payment instructions and confirmation -->
           <template v-if="modal.step === 'input'">
             <div class="p-6 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <h3 class="text-lg font-extrabold text-slate-900">Pay via M-Pesa</h3>
-                <p class="text-sm text-slate-400 mt-0.5">{{ modal.plan?.name }} — KES {{ fmtPrice(modal.plan?.price ?? 0) }}</p>
+                <p class="text-sm text-slate-400 mt-0.5">{{ modal.plan?.name }} — KES {{ fmtPrice(modal.plan?.price ??
+                  0) }}</p>
               </div>
-              <button @click="closeModal"
+              <button @click="closeModal" aria-label="Close payment modal"
                 class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition">
                 <XMarkIcon class="w-4 h-4 text-slate-500" />
               </button>
             </div>
 
-            <div class="p-6 space-y-5">
-              <!-- Amount summary -->
-              <div class="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
-                  <span class="text-white font-extrabold text-sm">M</span>
-                </div>
-                <div>
-                  <p class="text-xs text-green-700 font-semibold">M-Pesa STK Push</p>
-                  <p class="text-xl font-extrabold text-green-800">KES {{ fmtPrice(modal.plan?.price ?? 0) }}</p>
+            <div class="p-6 space-y-5 overflow-y-auto min-h-0 overscroll-contain">
+              <div class="bg-green-50 border border-green-200 rounded-xl p-4">
+                <p class="text-xs text-green-700 font-bold uppercase tracking-wide mb-1">Manual M-Pesa payment</p>
+                <p class="text-2xl font-extrabold text-green-800 mb-3">KES {{ fmtPrice(modal.plan?.price ?? 0) }}</p>
+                <div class="space-y-2 text-sm text-green-900">
+                  <div class="flex items-center justify-between gap-3"><span class="text-green-700">Paybill
+                      number</span><strong>522533</strong></div>
+                  <div class="flex items-center justify-between gap-3"><span class="text-green-700">Account
+                      number</span><strong>7992114</strong></div>
                 </div>
               </div>
 
-              <!-- Phone field -->
+              <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p class="text-sm font-bold text-slate-800 mb-2">How to pay</p>
+                <ol class="list-decimal pl-5 space-y-1.5 text-sm text-slate-600">
+                  <li>Open M-Pesa and select <strong>Lipa na M-Pesa</strong>, then <strong>Paybill</strong>.</li>
+                  <li>Enter Paybill <strong>522533</strong> and account number <strong>7992114</strong>.</li>
+                  <li>Pay exactly <strong>KES {{ fmtPrice(modal.plan?.price ?? 0) }}</strong>.</li>
+                  <li>Copy and paste the complete confirmation SMS below after payment.</li>
+                </ol>
+              </div>
+
               <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
-                  M-Pesa Phone Number
-                </label>
-                <div class="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#229DE7]/30 focus-within:border-[#229DE7] transition">
-                  <span class="px-3 py-3 bg-slate-50 border-r border-slate-200 text-sm font-semibold text-slate-500">+254</span>
-                  <input
-                    v-model="form.phone"
-                    type="tel"
-                    placeholder="7XX XXX XXX"
-                    maxlength="12"
-                    class="flex-1 px-4 py-3 text-sm focus:outline-none"
-                    @keyup.enter="initiatePayment"
-                  />
-                </div>
-                <p class="text-xs text-slate-400 mt-1.5">Enter the Safaricom number registered on M-Pesa</p>
+                <label for="mpesa-confirmation"
+                  class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">M-Pesa confirmation
+                  message</label>
+                <textarea id="mpesa-confirmation" v-model="form.confirmationMessage" rows="4" maxlength="1500"
+                  placeholder="Paste the full M-Pesa confirmation SMS here, including the transaction code, amount and recipient details."
+                  class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#229DE7]/30 focus:border-[#229DE7] resize-y" />
+                <p class="text-xs text-slate-400 mt-1.5">Paste the complete message exactly as received. Never share
+                  your M-Pesa PIN.</p>
               </div>
 
-              <p v-if="modal.error" class="text-sm text-red-600 font-medium bg-red-50 rounded-xl px-4 py-3">
-                {{ modal.error }}
-              </p>
+              <div class="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3">
+                <ExclamationTriangleIcon class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <p class="text-xs text-amber-800">Your subscription will not activate immediately. We’ll verify the
+                  payment first and activate your plan once the transaction is confirmed.</p>
+              </div>
+
+              <p v-if="modal.error" class="text-sm text-red-600 font-medium bg-red-50 rounded-xl px-4 py-3">{{
+                modal.error }}</p>
             </div>
 
             <div class="px-6 pb-6 flex gap-3">
               <button @click="closeModal"
-                class="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition">
-                Cancel
-              </button>
-              <button @click="initiatePayment" :disabled="modal.loading"
+                class="flex-1 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition">Cancel</button>
+              <button @click="submitOfflinePayment" :disabled="modal.loading"
                 class="flex-1 py-3 rounded-xl bg-green-600 text-white text-sm font-bold hover:bg-green-700 transition disabled:opacity-60 flex items-center justify-center gap-2">
                 <svg v-if="modal.loading" class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="40 60"/>
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="40 60" />
                 </svg>
-                {{ modal.loading ? 'Sending prompt...' : 'Send M-Pesa Prompt' }}
-              </button>
-            </div>
-          </template>
-
-          <!-- ── STEP 2: Waiting / polling ── -->
-          <template v-if="modal.step === 'waiting'">
-            <div class="p-8 text-center">
-              <!-- Animated M-Pesa ring -->
-              <div class="relative w-24 h-24 mx-auto mb-6">
-                <div class="absolute inset-0 rounded-full border-4 border-green-100" />
-                <div class="absolute inset-0 rounded-full border-4 border-green-500 border-t-transparent animate-spin" />
-                <div class="absolute inset-0 flex items-center justify-center">
-                  <div class="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center">
-                    <span class="text-white font-extrabold text-lg">M</span>
-                  </div>
-                </div>
-              </div>
-
-              <h3 class="text-lg font-extrabold text-slate-900 mb-2">Waiting for Payment</h3>
-              <p class="text-sm text-slate-500 mb-1">
-                An M-Pesa prompt has been sent to
-                <span class="font-bold text-slate-700">{{ displayPhone }}</span>
-              </p>
-              <p class="text-sm text-slate-400 mb-6">Enter your M-Pesa PIN to complete the payment</p>
-
-              <!-- Timeout bar -->
-              <div class="w-full bg-slate-100 rounded-full h-1.5 mb-6">
-                <div class="bg-green-500 h-1.5 rounded-full transition-all duration-1000"
-                  :style="{ width: `${timeoutPercent}%` }" />
-              </div>
-
-              <button @click="cancelPolling"
-                class="text-sm text-slate-400 hover:text-slate-600 underline transition">
-                Cancel
+                {{ modal.loading ? 'Submitting...' : 'Submit for Verification' }}
               </button>
             </div>
           </template>
@@ -315,11 +284,12 @@
               <div class="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-5">
                 <CheckCircleIcon class="w-12 h-12 text-emerald-500" />
               </div>
-              <h3 class="text-xl font-extrabold text-slate-900 mb-2">Subscription Activated!</h3>
+              <h3 class="text-xl font-extrabold text-slate-900 mb-2">Payment Submitted</h3>
               <p class="text-sm text-slate-500 mb-1">
-                Your <strong>{{ modal.plan?.name }}</strong> is now active.
+                Your payment confirmation for <strong>{{ modal.plan?.name }}</strong> has been submitted.
               </p>
-              <p class="text-sm text-slate-400 mb-8">Payment received via M-Pesa.</p>
+              <p class="text-sm text-slate-400 mb-8">We will verify the transaction before activating your subscription.
+              </p>
               <button @click="closeModal"
                 class="w-full py-3 rounded-xl bg-[#229DE7] text-white font-bold text-sm hover:bg-[#1b85c8] transition">
                 Continue to Bizaa
@@ -356,7 +326,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import {
   CheckBadgeIcon,
   CheckIcon,
@@ -370,46 +340,26 @@ import {
 } from "@heroicons/vue/24/outline";
 import SubscriptionService from "@/services/SubscriptionService";
 import { useAuthStore } from "@/stores/auth";
-import { useRouter } from "vue-router";
 
-const auth   = useAuthStore();
-const router = useRouter();
+const auth = useAuthStore();
 
 // ── State ───────────────────────────────────────────────────────────────────
-const current        = ref(null);
-const plans          = ref([]);
-const history        = ref([]);
+const current = ref(null);
+const plans = ref([]);
+const history = ref([]);
 const loadingCurrent = ref(true);
-const loadingPlans   = ref(true);
+const loadingPlans = ref(true);
 const loadingHistory = ref(true);
 
 const modal = ref({
   open: false,
   plan: null,
-  step: "input",        // input | waiting | success | failed
+  step: "input",        // input | success | failed
   loading: false,
   error: null,
-  checkoutRequestId: null,
   failureReason: "",
 });
-const form = ref({ phone: "" });
-
-// Polling
-let pollTimer     = null;
-let timeoutTimer  = null;
-let pollStartedAt = 0;
-const POLL_MS     = 3000;
-const TIMEOUT_MS  = 120_000; // 2 min
-const elapsed     = ref(0);
-
-const timeoutPercent = computed(() =>
-  Math.max(0, 100 - (elapsed.value / TIMEOUT_MS) * 100)
-);
-
-const displayPhone = computed(() => {
-  const raw = form.value.phone.replace(/\D/g, "");
-  return "+254 " + raw;
-});
+const form = ref({ confirmationMessage: "" });
 
 // ── Computed ────────────────────────────────────────────────────────────────
 const daysPercent = computed(() => {
@@ -454,7 +404,6 @@ async function loadHistory() {
 }
 
 onMounted(() => { loadCurrent(); loadPlans(); loadHistory(); });
-onUnmounted(() => stopPolling());
 
 // ── Modal ────────────────────────────────────────────────────────────────────
 function openModal(plan) {
@@ -464,102 +413,52 @@ function openModal(plan) {
     step: "input",
     loading: false,
     error: null,
-    checkoutRequestId: null,
-    failureReason: "",
   };
-  form.value.phone = "";
+  form.value.confirmationMessage = "";
 }
 
 function closeModal() {
-  stopPolling();
   modal.value.open = false;
   if (modal.value.step === "success") {
-    loadCurrent();
     loadHistory();
-    router.push("/dashboard");
   }
 }
 
 function retryPayment() {
-  stopPolling();
-  modal.value.step    = "input";
-  modal.value.error   = null;
+  modal.value.step = "input";
+  modal.value.error = null;
   modal.value.loading = false;
 }
 
-function cancelPolling() {
-  stopPolling();
-  modal.value.step = "input";
-}
+// ── Offline M-Pesa payment submission ────────────────────────────────────────
+async function submitOfflinePayment() {
+  const confirmationMessage = form.value.confirmationMessage.trim();
 
-// ── STK Initiation ───────────────────────────────────────────────────────────
-async function initiatePayment() {
-  const rawPhone = form.value.phone.replace(/\D/g, "");
-  if (rawPhone.length < 9) {
-    modal.value.error = "Please enter a valid M-Pesa phone number.";
+  if (!confirmationMessage) {
+    modal.value.error = "Paste your M-Pesa confirmation message before submitting.";
+    return;
+  }
+
+  if (confirmationMessage.length < 15) {
+    modal.value.error = "The confirmation message looks too short. Please paste the complete M-Pesa SMS.";
     return;
   }
 
   modal.value.loading = true;
-  modal.value.error   = null;
+  modal.value.error = null;
 
   try {
-    const res = await SubscriptionService.initiateStk({
+    await SubscriptionService.submitOfflinePayment({
       plan_id: modal.value.plan.id,
-      phone:   rawPhone,
+      confirmation_message: confirmationMessage,
     });
-
-    modal.value.checkoutRequestId = res.data.checkout_request_id;
-    modal.value.step              = "waiting";
-    modal.value.loading           = false;
-    startPolling();
+    modal.value.step = "success";
   } catch (err) {
-    modal.value.error   = err?.response?.data?.message ?? "Failed to send M-Pesa prompt. Please try again.";
+    modal.value.error = err?.response?.data?.message
+      ?? "We could not submit your payment confirmation. Please check your connection and try again.";
+  } finally {
     modal.value.loading = false;
   }
-}
-
-// ── Polling ──────────────────────────────────────────────────────────────────
-function startPolling() {
-  pollStartedAt = Date.now();
-  elapsed.value = 0;
-
-  pollTimer = setInterval(async () => {
-    elapsed.value = Date.now() - pollStartedAt;
-
-    if (elapsed.value >= TIMEOUT_MS) {
-      stopPolling();
-      modal.value.step          = "failed";
-      modal.value.failureReason = "Payment timed out. Please try again.";
-      return;
-    }
-
-    try {
-      const res    = await SubscriptionService.checkStkStatus(modal.value.checkoutRequestId);
-      const status = res.data?.status;
-
-      if (status === "completed") {
-        stopPolling();
-        modal.value.step = "success";
-        // Refresh subscription in auth store so sidebar updates immediately
-        await loadCurrent();
-      } else if (status === "failed") {
-        stopPolling();
-        modal.value.step          = "failed";
-        modal.value.failureReason = res.data?.response_description
-          ?? "The payment was declined. Please check your M-Pesa balance and try again.";
-      }
-      // status === "pending" → keep polling
-    } catch {
-      // Network blip — keep polling
-    }
-  }, POLL_MS);
-}
-
-function stopPolling() {
-  clearInterval(pollTimer);
-  clearTimeout(timeoutTimer);
-  pollTimer = null;
 }
 
 // ── Formatters ────────────────────────────────────────────────────────────────
@@ -583,9 +482,9 @@ function statusLabel(s) {
 function statusBadgeClass(s) {
   const base = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold";
   return {
-    trial:     `${base} bg-blue-100 text-blue-700`,
-    active:    `${base} bg-emerald-100 text-emerald-700`,
-    expired:   `${base} bg-red-100 text-red-700`,
+    trial: `${base} bg-blue-100 text-blue-700`,
+    active: `${base} bg-emerald-100 text-emerald-700`,
+    expired: `${base} bg-red-100 text-red-700`,
     cancelled: `${base} bg-slate-100 text-slate-500`,
   }[s] ?? `${base} bg-slate-100 text-slate-500`;
 }

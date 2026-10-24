@@ -25,6 +25,9 @@ export default {
 
   // Subscriptions
   getSubscriptions: (params = {})   => api.get("/subscriptions", { params }).then(r => r.data),
+  getSubscriptionsApprovals: (params = {})   => api.get("/subscriptions-approvals", { params }).then(r => r.data),
+  renewSubscription: (id, status) =>
+  api.post(`/subscription-approvals/${id}/renew`, { status }).then(r => r.data),
   getPlans:         ()              => api.get("/subscription-plans").then(r => r.data),
   grantSubscription:(data)          => api.post("/subscriptions/grant", data).then(r => r.data),
   revokeSubscription:(id)           => api.post(`/subscriptions/${id}/revoke`).then(r => r.data),

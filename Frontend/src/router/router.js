@@ -60,6 +60,7 @@ const routes = [
       { path: "businesses/:id", name: "SuperAdminBusinessView",  component: () => import("@/pages/SuperAdmin/BusinessView.vue") },
       { path: "subscriptions",  name: "SuperAdminSubscriptions", component: () => import("@/pages/SuperAdmin/Subscriptions.vue") },
       { path: "plans",          name: "SuperAdminPlans",         component: () => import("@/pages/SuperAdmin/SubscriptionPlans.vue") },
+      { path: "subscriptions-approval",  name: "SuperAdminSubscriptionApproval", component: () => import("@/pages/SuperAdmin/SubscriptionApproval.vue") },
       { path: "stores",         name: "SuperAdminStores",        component: () => import("@/pages/SuperAdmin/Stores.vue") },
       { path: "reports",        name: "SuperAdminReports",       component: () => import("@/pages/SuperAdmin/Reports.vue") },
       { path: "settings",       name: "SuperAdminSettings",      component: () => import("@/pages/SuperAdmin/Settings.vue") },

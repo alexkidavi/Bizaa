@@ -5,7 +5,10 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\BusinessSubscription;
+use App\Models\Subscription;
+use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -43,7 +46,51 @@ class SubscriptionController extends Controller
             'created_at'     => $s->created_at?->format('Y-m-d'),
         ]));
     }
+    public function renewSubscription(Request $request,$id){
+     $plan=SubscriptionPayment::find($id);
+     $plan->update(['status'=>$request->status]);
+     $subscribed=Subscription::find($plan->subscription_id);
+     if($request->status=="approved"){
+        $business_id=User::find($plan->user_id)->business_id;
+        BusinessSubscription::where('business_id',$business_id)->update(['starts_at'=>$subscribed->starts_at,'ends_at'=>$subscribed->ends_at,'status'=>'active']);
 
+     }
+    }
+ public function Approvals(Request $request): JsonResponse
+    {
+       $query = SubscriptionPayment::with([
+    'subscription',
+    'plan',
+    'user.business',
+])->orderByDesc('created_at');
+
+        if ($status = $request->get('status')) {
+            $query->where('status', $status);
+        }
+
+        if ($search = $request->get('search')) {
+            $query->whereHas('business', fn($q) =>
+                $q->where('business_name', 'like', "%{$search}%")
+                  ->orWhere('business_email', 'like', "%{$search}%")
+            );
+        }
+
+        $subs = $query->paginate(25);
+      
+        return response()->json($subs->through(fn($s) => [
+            'id'             => $s->id,
+            'business_id'    => $s->user?->business_id,
+            'business_name'  => $s->user?->business?->business_name,
+            'plan'           => $s->plan?->name,
+            'status'         => $s->status,
+            'starts_at'      => $s->subscription?->starts_at?->format('Y-m-d'),
+            'ends_at'        => $s->subscription?->ends_at?->format('Y-m-d'),
+            // 'days_left'      => $s->isActive() ? (int) now()->diffInDays($s->ends_at, false) : 0,
+            'amount_paid'    => (float) $s->amount,
+            'payment_method' => $s->payment_method,
+            'created_at'     => $s->created_at?->format('Y-m-d'),
+        ]));
+    }
     public function plans(): JsonResponse
     {
         return response()->json(SubscriptionPlan::where('is_active', true)->orderBy('sort_order')->get());

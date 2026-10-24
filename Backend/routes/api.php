@@ -158,6 +158,7 @@ Route::prefix('subscription')->middleware(['auth:api'])->group(function () {
     Route::get('/current',      [SubscriptionController::class, 'current']);
     Route::get('/history',      [SubscriptionController::class, 'history']);
     Route::post('/initiate-stk',[SubscriptionController::class, 'initiateStk']);
+    Route::post('/offline-payment',[SubscriptionController::class, 'offlinePayment']);
     Route::get('/sub-plans',        [SubscriptionController::class, 'plans']);
     Route::get('/subscription-plans',        [SubscriptionController::class, 'allplans']);
 });
@@ -905,6 +906,12 @@ Route::prefix('superadmin')->middleware(['auth:api', 'superadmin'])->group(funct
 
     // Subscription management
     Route::get('/subscriptions',              [SuperAdminSubscription::class, 'index']);
+    Route::get('/subscriptions-approvals',              [SuperAdminSubscription::class, 'Approvals']);
+    Route::post('/subscription-approvals/{id}/renew', [
+    SuperAdminSubscription::class,
+    'renewSubscription'
+]);
+
     Route::get('/subscription-plans',         [SuperAdminSubscription::class, 'plans']);
     Route::post('/subscriptions/grant',       [SuperAdminSubscription::class, 'grant']);
     Route::post('/subscriptions/{id}/revoke', [SuperAdminSubscription::class, 'revoke']);

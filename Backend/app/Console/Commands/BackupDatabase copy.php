@@ -32,12 +32,6 @@ class BackupDatabase extends Command
             // File name
             $fileName = 'backup-' . date('Y-m-d_H-i-s') . '.sql';
 
-            // Credentials go in a temporary MySQL option file rather than
-            // directly on the command line — a shell command's arguments
-            // (including any password interpolated into it) are visible to
-            // every other user on the box via `ps aux` for as long as
-            // mysqldump runs. The option file is created 0600 (owner-only)
-            // and removed immediately after, win or lose.
             $optionFile = tempnam(sys_get_temp_dir(), 'bizaa_backup_');
             file_put_contents(
                 $optionFile,
@@ -64,7 +58,6 @@ class BackupDatabase extends Command
             $this->error('['.now().'] Backup failed: '.$e->getMessage());
             return 1;
         }
-
         return 0;
     }
 }

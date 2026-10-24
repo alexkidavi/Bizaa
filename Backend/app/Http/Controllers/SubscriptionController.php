@@ -10,6 +10,10 @@ use App\Models\BusinessSubscription;
 use App\Services\MpesaService;
 use Illuminate\Support\Facades\Crypt;
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use App\Models\Subscription;
+use App\Models\SubscriptionPayment;
 class SubscriptionController extends Controller
 {
     // GET /api/subscription/plans — public list of available plans
@@ -160,4 +164,121 @@ class SubscriptionController extends Controller
             'plan_name'            => $plan->name,
         ]);
     }
+
+public function offlinePayment(Request $request): JsonResponse
+{
+    $validated = $request->validate([
+        'plan_id' => [
+            'required',
+            'integer',
+            'exists:subscription_plans,id',
+        ],
+        'confirmation_message' => [
+            'required',
+            'string',
+            'min:10',
+            'max:5000',
+        ],
+    ]);
+
+    $user = $request->user();
+
+    if (!$user) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthenticated. Please log in again.',
+        ], 401);
+    }
+
+    $plan = SubscriptionPlan::findOrFail($validated['plan_id']);
+
+    // Extract a possible M-Pesa transaction reference.
+    // This is only a candidate until independently verified.
+    $message = trim($validated['confirmation_message']);
+
+    preg_match(
+        '/^\s*([A-Z0-9]{10})\b/i',
+        $message,
+        $matches
+    );
+
+    $transactionCode = isset($matches[1])
+        ? strtoupper($matches[1])
+        : null;
+
+    // Reject duplicate references where one can be extracted.
+    if ($transactionCode && SubscriptionPayment::where(
+        'transaction_code',
+        $transactionCode
+    )->exists()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'This M-Pesa transaction reference has already been submitted.',
+        ], 422);
+    }
+
+    // Extract the amount for preliminary review only.
+    preg_match(
+        '/\bKsh\.?\s*([\d,]+(?:\.\d{1,2})?)/i',
+        $message,
+        $amountMatches
+    );
+
+    $reportedAmount = isset($amountMatches[1])
+        ? (float) str_replace(',', '', $amountMatches[1])
+        : null;
+
+    if ($reportedAmount !== null &&
+        abs($reportedAmount - (float) $plan->price) > 0.001) {
+        return response()->json([
+            'success' => false,
+            'message' => 'The amount in your confirmation message does not match the selected plan. Please check the plan and message.',
+        ], 422);
+    }
+
+    $result = DB::transaction(function () use (
+        $user,
+        $plan,
+        $message,
+        $transactionCode,
+        $reportedAmount
+    ) {
+         $plann = SubscriptionPlan::findOrFail($plan->id);
+        // Create a subscription pending payment verification.
+        $subscription = Subscription::create([
+            'user_id' => $user->id,
+            'subscription_plan_id' => $plan->id,
+            'status' => 'pending',
+            'starts_at' => now(),
+            'ends_at' =>now()->addDays($plann->duration_days),
+        ]);
+
+        // Save the submitted confirmation for review.
+        $payment = SubscriptionPayment::create([
+            'subscription_id' => $subscription->id,
+            'user_id' => $user->id,
+            'subscription_plan_id' => $plan->id,
+            'amount' => $reportedAmount ?? $plan->price,
+            'transaction_code' => $transactionCode,
+            'confirmation_message' => $message,
+            'payment_method' => 'mpesa_offline',
+            'status' => 'pending',
+        ]);
+
+        return [
+            'subscription' => $subscription,
+            'payment' => $payment,
+        ];
+    });
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Your payment confirmation has been submitted successfully. Your subscription will be activated after payment verification.',
+        'data' => [
+            'subscription_id' => $result['subscription']->id,
+            'payment_id' => $result['payment']->id,
+            'payment_status' => 'pending',
+        ],
+    ], 201);
+}
 }
